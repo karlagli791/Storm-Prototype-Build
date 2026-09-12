@@ -14,14 +14,19 @@
 import * as THREE from 'three';
 import { ARENA_RADIUS, clamp } from '../core/Types';
 
+/**
+ * Blueprint constants, nudged toward the framing observed in the Storm 2 prototype (Xenia
+ * session, docs/proto/05): the retail camera sits lower and closer at neutral range so the
+ * fighters fill more of the frame, and pulls back faster as they separate.
+ */
 export const CAMERA_PARAMS = {
   H_OFFSET: 1.2,
-  D_MIN: 6.0,
+  D_MIN: 5.2,
   D_MAX: 16.5,
-  K_D: 0.55,
-  H_MIN: 1.8,
+  K_D: 0.6,
+  H_MIN: 1.45,
   H_MAX: 5.4,
-  K_H: 0.22,
+  K_H: 0.24,
   THETA_BIAS: 0.26,
   LAMBDA: 10.5,
   LOOK_LAMBDA: 14.0,
@@ -140,7 +145,7 @@ export class DualTargetCamera {
     this.camera.lookAt(this.lookAt);
 
     // Field of view widens slightly as fighters separate, tightening framing in close range.
-    const fov = clamp(46 + d * 0.35, 46, 58);
+    const fov = clamp(43 + d * 0.4, 43, 58);
     if (Math.abs(this.camera.fov - fov) > 0.01) {
       this.camera.fov = fov;
       this.camera.updateProjectionMatrix();

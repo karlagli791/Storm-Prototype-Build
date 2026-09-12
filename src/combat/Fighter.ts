@@ -7,7 +7,7 @@
  */
 import * as THREE from 'three';
 import { InputManager, InputSource, ScriptedInputSource } from '../core/InputManager';
-import { CharacterDef, ComboBranch, CombatEvent, CombatEventKind, CombatState, HitboxDef, MoveDef } from '../core/Types';
+import { CharacterDef, ComboBranch, CombatEvent, CombatEventKind, CombatState, HitDir, HitboxDef, MoveDef, SupportType } from '../core/Types';
 import { CombatStats } from './CombatStats';
 import { FighterRig } from '../render/FighterRig';
 
@@ -70,6 +70,21 @@ export class Fighter {
 
   switchRequested = false;
   lastHitBy = -1;
+  /** Frames both fighters freeze after a hit (HITSTOP_*). Decremented by the controller. */
+  hitstopFrames = 0;
+  /** Direction the last hit came from, relative to facing — picks the CC2 directional damage clip. */
+  lastHitDir: HitDir = 'F';
+  /** Current stick direction relative to facing (dash-step clip selection). */
+  moveDirLocal: HitDir = 'F';
+  /** Support role when this fighter is on the bench. */
+  supportType: SupportType = 'ATTACK';
+  /** Seconds until this support may intervene again (SUPPORT_INJURED_WAIT_SEC). */
+  supportCooldown = 0;
+  /** Frames left in a support intervention. */
+  supportFrames = 0;
+  supportRequested = false;
+  /** Set on the throw's release frame; the game loop spawns the shuriken. */
+  throwRequested = false;
 
   constructor(public readonly def: CharacterDef, public input: InputManager) {
     this.rig = new FighterRig(def);

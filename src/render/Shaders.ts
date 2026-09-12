@@ -45,6 +45,9 @@ export const CEL_FRAGMENT = /* glsl */ `
   uniform float uFlash;
   uniform float uAlphaTest;
   uniform float uAlphaBlend;
+  uniform sampler2D uRamp;
+  uniform float uUseRamp;
+  uniform float uRampRow;
 
   varying vec3 vNormalW;
   varying vec3 vPosW;
@@ -64,12 +67,18 @@ export const CEL_FRAGMENT = /* glsl */ `
       if (uAlphaBlend > 0.5) outAlpha = texel.a;
     }
 
-    // --- Quantized diffuse: 3 discrete bands ---
+    // --- Quantized diffuse ---
     float NdotL = dot(N, L);
     float band;
-    if (NdotL > 0.5)      band = 1.0;   // Direct light
-    else if (NdotL > 0.0) band = 0.6;   // Midtone
-    else                  band = 0.3;   // Shadow tone
+    if (uUseRamp > 0.5) {
+      // CC2 celshade ramp (system/celshade.tex): rows are hard-stepped lighting ramps indexed by
+      // half-Lambert; row 8 is the classic three-band character ramp.
+      band = texture2D(uRamp, vec2(clamp(NdotL * 0.5 + 0.5, 0.01, 0.99), uRampRow)).r;
+    } else {
+      if (NdotL > 0.5)      band = 1.0;   // Direct light
+      else if (NdotL > 0.0) band = 0.6;   // Midtone
+      else                  band = 0.3;   // Shadow tone
+    }
 
     vec3 color = albedo * band * uLightColor + albedo * uAmbient;
 
@@ -132,6 +141,9 @@ export interface CelMaterialOptions {
   doubleSided?: boolean;
   /** Output the texture alpha (for blended FX sheets / soft ground overlays). */
   alphaBlend?: boolean;
+  /** CC2 celshade ramp atlas (64 rows); when set, replaces the fixed 3-band quantization. */
+  ramp?: THREE.Texture | null;
+  rampRow?: number;
 }
 
 export const SHARED_LIGHT = {
@@ -160,6 +172,9 @@ export function createCelMaterial(opts: CelMaterialOptions): THREE.ShaderMateria
       uFlash: { value: 0.0 },
       uAlphaTest: { value: opts.alphaTest ?? 0.0 },
       uAlphaBlend: { value: opts.alphaBlend ? 1.0 : 0.0 },
+      uRamp: { value: opts.ramp ?? null },
+      uUseRamp: { value: opts.ramp ? 1.0 : 0.0 },
+      uRampRow: { value: ((opts.rampRow ?? 8) + 0.5) / 64 },
     },
     transparent: !!opts.alphaBlend,
     depthWrite: !opts.alphaBlend,
@@ -216,5 +231,19 @@ export function setFlash(root: THREE.Object3D, amount: number): void {
   root.traverse((obj) => {
     const m = (obj as THREE.Mesh).material as THREE.ShaderMaterial | undefined;
     if (m && m.uniforms && m.uniforms.uFlash) m.uniforms.uFlash.value = amount;
+  });
+}
+
+/** Bind the CC2 celshade ramp to every cel material under `root` (row index 0-63). */
+export function setRamp(root: THREE.Object3D, ramp: THREE.Texture | null, row = 8): void {
+  root.traverse((obj) => {
+    const mats = (obj as THREE.Mesh).material as THREE.ShaderMaterial | THREE.ShaderMaterial[] | undefined;
+    const list = Array.isArray(mats) ? mats : mats ? [mats] : [];
+    for (const m of list) {
+      if (!m || !m.uniforms || !m.uniforms.uRamp) continue;
+      m.uniforms.uRamp.value = ramp;
+      m.uniforms.uUseRamp.value = ramp ? 1.0 : 0.0;
+      m.uniforms.uRampRow.value = (row + 0.5) / 64;
+    }
   });
 }

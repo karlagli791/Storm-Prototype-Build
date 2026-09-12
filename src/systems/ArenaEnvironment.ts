@@ -50,6 +50,26 @@ export class ArenaEnvironment {
    * floor and tree dressing are hidden; the gameplay boundary (32 m cylinder) is unchanged and the
    * translucent barrier stays as the visual cue for it.
    */
+  /** Remove the bound stage (used when cycling stages) and show the procedural arena again. */
+  unloadStage(): void {
+    if (this.stageRoot) {
+      this.group.remove(this.stageRoot);
+      this.stageRoot.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (m.isMesh) {
+          m.geometry.dispose();
+          const mats = Array.isArray(m.material) ? m.material : [m.material];
+          for (const mat of mats) mat.dispose();
+        }
+      });
+      this.stageRoot = null;
+      this.stageName = null;
+    }
+    this.proceduralFloor.visible = true;
+    this.proceduralDressing.visible = true;
+    this.proceduralWall.visible = true;
+  }
+
   async tryLoadStage(path: string): Promise<boolean> {
     try {
       const head = await fetch(path, { method: 'HEAD' });
@@ -62,16 +82,30 @@ export class ArenaEnvironment {
       const scene = gltf.scene;
       // CC2 stages are Y-up after glTF export; drop the stage so its floor sits at y = 0.
       scene.updateMatrixWorld(true);
-      const box = new THREE.Box3().setFromObject(scene);
-      let floorY = -Infinity;
+      // Battle floor height: raycast straight down at the arena origin against the ground meshes
+      // (matched by mesh, material or texture name — CC2 stages usually name the texture "flo0x").
+      // CC2 authors the fighting floor at y=0, so fall back to that rather than the scene's lowest
+      // point (which is a river bed / backdrop skirt and would lift the whole stage).
+      const floorMeshes: THREE.Mesh[] = [];
+      scene.updateMatrixWorld(true);
       scene.traverse((o) => {
         const m = o as THREE.Mesh;
-        if (m.isMesh && /flor|floor|ground/i.test(m.name)) {
-          const b = new THREE.Box3().setFromObject(m);
-          floorY = Math.max(floorY, b.max.y);
-        }
+        if (!m.isMesh) return;
+        const src = (Array.isArray(m.material) ? m.material[0] : m.material) as THREE.MeshStandardMaterial;
+        const names = `${m.name} ${src?.name ?? ''} ${src?.map?.name ?? ''}`;
+        if (/flor|floor|ground|flo0/i.test(names) && !/river|water|hit_/i.test(names)) floorMeshes.push(m);
       });
-      if (!Number.isFinite(floorY)) floorY = box.min.y;
+      let floorY = 0;
+      if (floorMeshes.length) {
+        const ray = new THREE.Raycaster(new THREE.Vector3(0, 200, 0), new THREE.Vector3(0, -1, 0), 0, 400);
+        const hits = ray.intersectObjects(floorMeshes, false);
+        if (hits.length) floorY = hits[0].point.y;
+        else {
+          const b = new THREE.Box3();
+          for (const m of floorMeshes) b.expandByObject(m);
+          floorY = b.max.y;
+        }
+      }
       scene.position.y -= floorY;
       scene.traverse((o) => {
         const m = o as THREE.Mesh;
@@ -118,6 +152,11 @@ export class ArenaEnvironment {
         // CC2 stages layer "light" (sun dapple) and "shadow" planes over the ground; they are
         // additive / multiplicative FX sheets, not opaque geometry.
         const texName = (map?.name ?? '') + ' ' + m.name + ' ' + (src?.name ?? '');
+        if (/sky|enkei|back0|bac0|cloud/i.test(texName) && !hasAlpha) {
+          // Sky dome / distant backdrop: unlit so it never goes dark on the far side.
+          mat.uniforms.uLightColor.value = new THREE.Color(0, 0, 0);
+          mat.uniforms.uAmbient.value = new THREE.Color(1, 1, 1);
+        }
         if (/light|glow|flare/i.test(texName) || /shadow|kage/i.test(texName)) {
           const additive = /light|glow|flare/i.test(texName);
           mat.transparent = true;

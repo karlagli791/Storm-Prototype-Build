@@ -9,9 +9,10 @@
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { CharacterDef, CombatState } from '../core/Types';
+import { CharacterDef, CombatState, HitDir } from '../core/Types';
+import { bindingFor, ClipSpec } from '../combat/StormStates';
 import { SOCKET } from '../combat/CharacterDefs';
-import { addInvertedHull, createCelMaterial } from './Shaders';
+import { addInvertedHull, createCelMaterial, setRamp } from './Shaders';
 
 export interface PoseContext {
   state: CombatState;
@@ -25,7 +26,32 @@ export interface PoseContext {
   grounded: boolean;
   guardActive: boolean;
   charging: boolean;
+  moveDir: HitDir;
+  hitDir: HitDir;
+  falling: boolean;
+  framesLeft: number;
 }
+
+/** Shared CC2 common-animation bank (1cmnbod1): loaded once, retargeted per character. */
+let cmnBankPromise: Promise<THREE.AnimationClip[]> | null = null;
+function loadCommonBank(path = 'assets/cmn_anims.glb'): Promise<THREE.AnimationClip[]> {
+  if (!cmnBankPromise) {
+    cmnBankPromise = (async () => {
+      try {
+        const head = await fetch(path, { method: 'HEAD' });
+        if (!head.ok || (head.headers.get('content-type') ?? '').includes('text/html')) return [];
+        const gltf = await new GLTFLoader().loadAsync(path);
+        return gltf.animations;
+      } catch (err) {
+        console.warn('[FighterRig] common animation bank unavailable', err);
+        return [];
+      }
+    })();
+  }
+  return cmnBankPromise;
+}
+/** Ramp texture shared by all rigs (set from main once loaded). */
+export const RIG_RAMP: { texture: THREE.Texture | null; row: number } = { texture: null, row: 8 };
 
 export class FighterRig {
   readonly root = new THREE.Group();
@@ -35,6 +61,9 @@ export class FighterRig {
   private mixer: THREE.AnimationMixer | null = null;
   private clips = new Map<string, THREE.AnimationClip>();
   private activeAction: THREE.AnimationAction | null = null;
+  private activeSpec: ClipSpec | null = null;
+  private activeState: CombatState | null = null;
+  private boneNames = new Set<string>();
   private time = 0;
   private parts: Record<string, THREE.Object3D> = {};
   private bladeGroup: THREE.Group | null = null;
@@ -299,6 +328,29 @@ export class FighterRig {
         this.clips.set(c.name, c);
       }
 
+      scene.traverse((o) => {
+        if ((o as THREE.Bone).isBone) this.boneNames.add(o.name);
+      });
+      // Retarget the shared bank: 1cmn00t0_* → <code>00t0_*, dropping tracks for bones this rig lacks.
+      const code = this.def.code;
+      loadCommonBank().then((bank) => {
+        for (const c of bank) {
+          const tracks: THREE.KeyframeTrack[] = [];
+          for (const t of c.tracks) {
+            const dot = t.name.lastIndexOf('.');
+            const node = t.name.slice(0, dot).replace(/^1cmn00t0/, `${code}00t0`);
+            const prop = t.name.slice(dot + 1);
+            if (!this.boneNames.has(node)) continue;
+            if (prop === 'position' && (/trall$/i.test(node) || /^\w{4}00t0$/i.test(node))) continue;
+            const nt = t.clone();
+            nt.name = `${node}.${prop}`;
+            tracks.push(nt);
+          }
+          if (tracks.length) this.clips.set(c.name, new THREE.AnimationClip(c.name, c.duration, tracks));
+        }
+      });
+      if (RIG_RAMP.texture) setRamp(scene, RIG_RAMP.texture, RIG_RAMP.row);
+
       this.root.remove(this.mannequin);
       this.root.add(scene);
       this.glbRoot = scene;
@@ -334,51 +386,65 @@ export class FighterRig {
     this.poseMannequin(ctx);
   }
 
-  private pickClip(ctx: PoseContext): string | null {
-    const names = [...this.clips.keys()];
-    if (!names.length) return null;
-    // CC2 clip codes (from bod1c / bod1l containers): nut0 idle, run1 run, jmp0 jump, lan0 land,
-    // dsf0 dash, dsh0s dash-hit, grd0 guard, ghf0 guard-hit, gda0 guard-break, dmg0f damage,
-    // dow0 knockdown, cmaNN neutral string, cmbNN branch strings, hola0 hold.
-    const c = this.def.code;
-    const want: string[] = [];
-    if (ctx.moveClip) want.push(ctx.moveClip);
-    else if (ctx.moveName) want.push(ctx.moveName);
-    switch (ctx.state) {
-      case CombatState.RUNNING: want.push(`${c}run1`, 'run', 'dash', 'walk'); break;
-      case CombatState.DASH_STARTUP: case CombatState.DASH_CHARGING: want.push(`${c}dsh0s`, `${c}dsf0`, 'dash'); break;
-      case CombatState.DASH_HOMING: case CombatState.SPARK_DASH: want.push(`${c}dsf0`, `${c}dsh1l`, 'chakra_dash', 'dash', 'run'); break;
-      case CombatState.DASH_IMPACT: case CombatState.DASH_REBOUND: case CombatState.DASH_CLASH: want.push(`${c}lan0`, `${c}dsh0l`, 'land'); break;
-      case CombatState.GUARDING: want.push(`${c}grd0`, 'guard', 'block'); break;
-      case CombatState.GUARD_COUNTER: want.push(`${c}gda0`, `${c}grd0`, 'guard'); break;
-      case CombatState.BLOCKSTUN: want.push(`${c}ghf0`, `${c}grd0`, 'guard'); break;
-      case CombatState.GUARD_BREAK: want.push(`${c}gda0`, `${c}dmg0f`, 'damage'); break;
-      case CombatState.HITSTUN: want.push(`${c}dmg0f`, `${c}ghf0`, 'damage', 'hit'); break;
-      case CombatState.LAUNCHED: case CombatState.TUMBLE: want.push(`${c}dow1`, `${c}dow0`, 'blow', 'launch', 'damage'); break;
-      case CombatState.KNOCKDOWN: case CombatState.CRUMPLE: case CombatState.WALL_SPLAT: case CombatState.DEAD: want.push(`${c}dow0`, 'down', 'crumple', 'damage'); break;
-      case CombatState.JUMPING: case CombatState.HOLLOW_STEP: case CombatState.NINJA_MOVE: want.push(`${c}jmp0`, 'jump'); break;
-      case CombatState.SUBSTITUTED: want.push(`${c}lan0`, `${c}nut0`, 'idle'); break;
-      case CombatState.COMBO_STRING: case CombatState.JUTSU: want.push(`${c}cma00`, `${c}nut0`); break;
-      default: want.push(`${c}nut0`, 'idle', 'wait', 'stand');
+  /** Resolve a clip spec against the clips actually present ({c} → character code). */
+  private resolve(spec: ClipSpec): ClipSpec | null {
+    const name = spec.clip.replace('{c}', this.def.code);
+    if (this.clips.has(name)) return { clip: name, loop: spec.loop, next: spec.next?.replace('{c}', this.def.code) };
+    // partial match (e.g. skl1_s → skl1_s1)
+    for (const k of this.clips.keys()) if (k.startsWith(name)) return { clip: k, loop: spec.loop, next: spec.next?.replace('{c}', this.def.code) };
+    return null;
+  }
+
+  private pickSpec(ctx: PoseContext): ClipSpec | null {
+    if (!this.clips.size) return null;
+    const binding = bindingFor(ctx.state, {
+      moveClip: ctx.moveClip,
+      moveDir: ctx.moveDir,
+      hitDir: ctx.hitDir,
+      airborne: !ctx.grounded,
+      falling: ctx.falling,
+      stateFrame: ctx.stateFrame,
+      framesLeft: ctx.framesLeft,
+    });
+    for (const spec of binding.clips) {
+      const r = this.resolve(spec);
+      if (r) return r;
     }
-    for (const w of want) {
-      const exact = names.find((n) => n === w);
-      if (exact) return exact;
-      const partial = names.find((n) => n.toLowerCase().includes(w));
-      if (partial) return partial;
-    }
-    return names[0];
+    const idle = this.resolve({ clip: '{c}nut0', loop: true });
+    return idle ?? { clip: [...this.clips.keys()][0], loop: true };
+  }
+
+  private play(spec: ClipSpec, fade = 0.08): void {
+    if (!this.mixer) return;
+    const clip = this.clips.get(spec.clip);
+    if (!clip) return;
+    const action = this.mixer.clipAction(clip);
+    if (this.activeAction === action && this.activeSpec?.clip === spec.clip) return;
+    if (this.activeAction) this.activeAction.fadeOut(fade);
+    action.reset();
+    action.setLoop(spec.loop ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
+    action.clampWhenFinished = true;
+    action.fadeIn(fade).play();
+    this.activeAction = action;
+    this.activeSpec = spec;
   }
 
   private updateGlbAnimation(ctx: PoseContext, dt: number): void {
-    const clipName = this.pickClip(ctx);
-    if (clipName && this.mixer) {
-      const clip = this.clips.get(clipName)!;
-      const action = this.mixer.clipAction(clip);
-      if (this.activeAction !== action) {
-        if (this.activeAction) this.activeAction.fadeOut(0.08);
-        action.reset().fadeIn(0.08).play();
-        this.activeAction = action;
+    // Re-pick on state change, on hit direction / fall changes, or when a one-shot finished and has a chain.
+    const stateKey = ctx.state;
+    const spec = this.pickSpec(ctx);
+    if (spec) {
+      const changed = this.activeState !== stateKey || !this.activeSpec;
+      const oneShotDone = this.activeAction && this.activeSpec && !this.activeSpec.loop && this.activeAction.time >= this.activeAction.getClip().duration - 1e-3;
+      if (changed) {
+        this.play(spec);
+        this.activeState = stateKey;
+      } else if (oneShotDone && this.activeSpec?.next) {
+        const nxt = this.resolve({ clip: this.activeSpec.next, loop: true });
+        if (nxt) this.play(nxt, 0.05);
+      } else if (!changed && this.activeSpec && spec.clip !== this.activeSpec.clip && this.activeSpec.loop && ctx.state === CombatState.NINJA_MOVE) {
+        // direction changed mid ninja-move
+        this.play(spec, 0.04);
       }
     }
     this.mixer?.update(dt);

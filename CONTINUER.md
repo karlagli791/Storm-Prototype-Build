@@ -20,20 +20,21 @@ runs on the real CyberConnect2 assets.
 
 | Area | State |
 | --- | --- |
-| Combat | 60 Hz deterministic FSM: idle/run/ninja move/hollow step, standard/charged/spark/turbo chakra dash with predictive homing, 4-hit string + up/down branches, jutsu (armored), guard sphere + durability + guard break, guard break counter (parry), 4-stock substitution, hitstun/launch/tumble/crumple/knockdown, wall splat on the 32 m cylinder, leader switch with autonomous outgoing fighter |
-| Camera | Dual-target midpoint orbital camera with the blueprint's exact constants |
-| Rendering | 3-band cel shader + hard specular + fresnel rim, inverted-hull outlines, alpha test / alpha blend / additive sheets for stages |
-| Characters | `public/assets/2nrt.glb` (Naruto, 50 clips) and `2ssk.glb` (Sasuke, 57 clips, Kusanagi merged) exported from Storm 4 xfbin data. Storm 2 versions kept as `*_s2.glb` |
-| Stages | `stage_sd03a.glb` Hidden Leaf Forest (default) and `stage_sd05a.glb` Forest of Quiet Movement, from Storm 2 data. `?stage=sd05a` switches |
-| HUD | Health/chakra/subs/support/guard bars; Storm 2 brush digits for the timer; "Go!", "Time Up", "1P/2P Won" sprites |
-| Input | Keyboard + polled gamepad (PS5 DualSense tested layout: Circle attack, Cross jump, Triangle dash, L2 guard/sub, R1 switch, Options pause, Create rematch) |
-| AI | P2 dummy cycles block / dash / combo / approach; subs and parries sometimes; F4 freezes it |
+| Combat | 60 Hz deterministic FSM mapped onto the prototype's own state vocabulary (`src/combat/StormStates.ts`: every state → PL_ACT/PL_ANM name + CC2 clip candidates). Idle/run/ninja move/hollow step, chakra dashes (standard/charged/spark/turbo), 4-hit string + up/down branches, jutsu, guard + guard break + counter, 4-stock substitution (warps above an airborne enemy), hitstun/launch/tumble/crumple/knockdown, wall splat, leader switch, **hitstop** (3/6/10 f), **chakra charge** (Triangle / N), **shuriken projectiles** (Square / H, guardable, parryable, dash-piercing), **support system** (manual R1 / Y call = combo join; automatic Cover Fire (Balance), Dash Cut + Charge Guard (Guard), Strike Back (Attack)), directional damage clips (dmf/dmb/dml/dmr). Balance keys from the XEX (`BALANCE` in StormStates) |
+| Camera | Dual-target midpoint orbital camera; constants nudged to the prototype's framing (closer/lower at neutral: D_MIN 5.2, H_MIN 1.45, fov 43–58) |
+| Rendering | Cel shader samples the game's own `celshade.tex` ramp (row 8, 3 bands: `public/assets/ui/celshade_ramp.png`) + hard specular + fresnel rim, inverted-hull outlines; stages: alpha test / blend / additive / multiply sheets, unlit sky. Blender cel study: `tools/scripts/blender_toon.py` → `docs/render/2nrt_toon.png` + `.blend` ("CC2 Toon" node group, Solidify inverted hull) |
+| Characters | `public/assets/2nrt.glb` (Naruto, 50 clips) and `2ssk.glb` (Sasuke, 57 clips) from Storm 4 xfbin data, Storm 2 versions as `*_s2.glb`. **Common bank** `cmn_anims.glb` (70 clips from Storm 4 `1cmnbod1`: damage, stagger, knockdown, wall, dodge, guard-break…) retargeted onto each rig at load |
+| Stages | `stage_sd03a.glb` Hidden Leaf Forest (default), `stage_sd05a.glb` Forest of Quiet Movement, `stage_sd01d.glb` Forest of Death. F5 cycles, `?stage=` overrides. Floor height found by raycast at the origin |
+| HUD | Storm 2 duel layout: portrait medallions (`ui/player_2nrt.png`, `player_2ssk.png`), name + current PL_ACT, life/chakra bars, support medallion (R1 / AI) with type + gauge, sub pips, guard bar, combo counter; brush timer digits, Go!/Time Up/Won plates |
+| Input | Keyboard + polled gamepad. Authentic Storm pad layout: Circle attack, Cross jump, Triangle alone = chakra charge, Triangle+Cross = chakra dash, Triangle+Circle = jutsu, R2 dash, Square throw, L2 guard/sub, L1/R1 support, R3 switch. Keyboard extras: H throw, N charge, Y support |
+| AI | P2 dummy cycles block / dash / combo / approach; throws shuriken at range, calls its support, subs and parries sometimes; F4 freezes it |
 | Verification | JS harness checks (run in the page console): neutral string via real hand sockets, homing vs runner, substitution, wall splat 20 f, guard counter 16 f crumple + chakra cap 80, Rasengan clip + hit |
 
 **Known gaps / next candidates**
 - Rasengan/Chidori palm dummy (`eff dmy01`) is in the `eff1` container (not imported); hitbox binds to the hand bone.
 - Storm 4 Naruto has a 3-clip neutral string; 4th hit and branches reuse `cmb` clips. Combo digits sprite sheet was not cut (rects failed), text fallback is used.
-- Support "Cover Fire / Dash Cut / Strike Back" interventions from the blueprint are not implemented (the prototype's debug select confirms the three support types: Attack = combo join + strike back, Guard = dash cut + charge guard, Balance = cover fire).
+- Support interventions are heuristic (distance / velocity triggers), not the prototype's exact trigger windows; `prm` frame-data tables are still locked in the wrapped disc files.
+- The three NUCC blobs found in the memory dump are not identified yet.
 - Prototype disc files are wrapped/encrypted in a format the retail CPK decryptor does not handle (see §3a); their assets are not extractable yet.
 
 ### 3a. Storm 2 prototype (Jul 26 2010) — what was learned by running it
@@ -115,6 +116,11 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 - **Two local add-on patches** (Blender-XFBIN-Importer 2.5.2 in `%APPDATA%\Blender Foundation\Blender\4.5\scripts\addons`): `materials/shaders.py` guards `bpy.context.space_data` for background mode; `importer.py` sets `group_name = 'default'` before the per-anm loop (crashed on `2nrtskl1`).
 - **Google Drive**: the web folder list is virtualised (scraping is unreliable, and JS-heavy scrolls froze the tab); the embedded folder view (`embeddedfolderview?id=`) is static and complete; public files download with `uc?export=download`.
 - **Hidden Palace** blocks curl (Cloudflare 403); the Internet Archive mirror does not.
+- **Reverse engineering went through memory, not the file wrapper**: the prototype's disc files stay encrypted, but the decrypted `default.xex` is resident in Xenia's guest RAM. `C:\Users\ysoyo\storm2proto\memdump.py` dumps guest 0x82000000+, `xex_report.py` extracts the strings (`docs/proto/xex_vocabulary.md`): the full PL_ACT_*/PL_ANM_* state list, the battle-balance parameter names (GUARD_POW_MAX, HITSTOP_*, CHAKRA_RECOVER_AT_CHARGE, SUPPORT_GAUGE_USE_*, PRJ_*, …), the Lua `cc*` API and the hit-sphere names. The engine's FSM was then re-mapped onto that vocabulary (`StormStates.ts`) instead of guessing.
+- **Common animation bank**: damage/stagger/knockdown/wall/dodge clips live in Storm 4's `1cmnbod1` bank, not in the character files. `export_cmn_anims.py` exports them once; `FighterRig.loadCommonBank()` retargets track names `1cmn00t0…` → `<code>00t0…` at runtime and drops missing-bone / root position tracks.
+- **Cel ramp comes from the game**: `system/celshade.tex` is a 64×64 atlas of lighting ramps; row 8 is the 3-band ramp. The engine samples it as `uRamp` instead of hard-coded thresholds, and the Blender toon group samples the same PNG (note Blender's V axis is bottom-up: row 8 from the top is V = 55.5/64).
+- **Background watchdog**: browsers stop requestAnimationFrame for hidden tabs (the Claude Browser pane is hidden most of the time), which froze the sim. A 60 Hz timer steps the simulation whenever no frame was drawn for 120 ms; rendering still only happens in rAF.
+- **Stage floor by raycast**: sd01d has no mesh literally named "floor" and its lowest point is a river bed 39 m down; taking the scene's min.y lifted the whole stage. The loader now raycasts down at the origin against meshes whose mesh/material/texture name matches `flo`, falling back to y = 0.
 - **Resources are shared per team** (health, chakra, subs, guard, support) so leader switch keeps one pool.
 
 ---
@@ -142,6 +148,15 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 14. ISO extracted with extract-xiso (12,859 files). Discovered every file is wrapped/encrypted (`0FF512ED` header, compressed); the retail CPK decryptor script does not apply. Documented, not cracked.
 15. Engine fix from soak test: CC2 root-motion position tracks stripped on load so meshes stay on their colliders (6,000-frame random-input soak: no exceptions, no NaN, 24 states exercised).
 
+### 2026-09-12 — Session 4: reverse engineering + overhaul
+16. Memory-dumped the running prototype's decrypted XEX from Xenia (`memdump.py`), extracted the engine vocabulary (`docs/proto/xex_vocabulary.md`): 300+ PL_ACT/PL_ANM states, balance keys, Lua API, hit spheres, celshade atlas.
+17. Combat overhaul on that vocabulary: `StormStates.ts` state→clip bindings, hitstop, chakra charge, shuriken projectiles, support system (manual call + three automatic intervention types), directional damage clips, clip chains, substitution warp-above.
+18. Storm 4 common animation bank (`1cmnbod1`, 70 clips) exported and retargeted at runtime: real stagger / knockdown / wall / dodge / guard-break animations on both fighters.
+19. Camera re-tuned to the prototype's framing; celshade ramp texture drives the cel shader; unlit sky; third stage `sd01d` Forest of Death + F5 stage cycling; Storm 2 duel HUD with portraits, current-act label, support medallion/gauge, combo counter.
+20. Authentic Storm pad layout (Triangle = chakra button) + keyboard H/N/Y; AI throws and calls support.
+21. Blender cel-shading study: `blender_toon.py` builds a "CC2 Toon" node group (Shader-to-RGB → celshade ramp × albedo, fresnel rim, stepped specular) and a Solidify inverted-hull ink outline; render + .blend in `docs/render/`.
+22. Soak test (25 s random input vs AI, 2,000+ ticks): no exceptions, 16 states exercised incl. THROW / CHAKRA_CHARGE / SUPPORT; fixed the hidden-tab sim freeze (background watchdog) and the sd01d floor offset (raycast floor).
+
 ---
 
 ## 5. How this file updates itself
@@ -156,3 +171,4 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 ## 6. Auto log
 - 2026-09-12 16:37 — Add CONTINUER.md master log, commit-msg auto-log hook and milestone script
 - 2026-09-12 16:38 — Strip CC2 root-motion position tracks so meshes stay on their colliders
+- 2026-09-12 17:00 — Storm 2 prototype run in Xenia: debug launcher, battle, debug menu captured; findings + screenshots

@@ -87,6 +87,12 @@ export enum CombatState {
   SUBSTITUTED = 'SUBSTITUTED',
   BLOCKSTUN = 'BLOCKSTUN',
   DEAD = 'DEAD',
+  /** PL_ACT_CHAKRA_CHARGE — stand still and regenerate chakra (interruptible). */
+  CHAKRA_CHARGE = 'CHAKRA_CHARGE',
+  /** PL_ACT_PRJ_LAND / PRJ_AIR — shuriken throw. */
+  THROW = 'THROW',
+  /** PL_ACT_SUP_* — a support character performing an intervention (autonomous). */
+  SUPPORT_ACT = 'SUPPORT_ACT',
 }
 
 /** States in which an incoming hit can be substituted out of. */
@@ -145,7 +151,15 @@ export const VULNERABLE_STATES: ReadonlySet<CombatState> = new Set([
   CombatState.CRUMPLE,
   CombatState.WALL_SPLAT,
   CombatState.BLOCKSTUN,
+  CombatState.CHAKRA_CHARGE,
+  CombatState.THROW,
 ]);
+
+/** Hit direction relative to the victim's facing (selects the CC2 directional damage clip). */
+export type HitDir = 'F' | 'B' | 'L' | 'R';
+
+/** Support character behaviour types (from the prototype's debug character select). */
+export type SupportType = 'ATTACK' | 'GUARD' | 'BALANCE';
 
 // ---------------------------------------------------------------------------
 // Input
@@ -162,6 +176,12 @@ export enum InputFlag {
   CHAKRA = 1 << 7,
   UP = 1 << 8,
   DOWN = 1 << 9,
+  /** Shuriken throw (PL_ACT_PRJ_*). */
+  THROW = 1 << 10,
+  /** Hold to charge chakra (PL_ACT_CHAKRA_CHARGE). */
+  CHARGE = 1 << 11,
+  /** Call the support character (PL_ACT_SUP_ENTRY → combo join). */
+  SUPPORT = 1 << 12,
 }
 
 export interface InputFrame {
@@ -276,6 +296,10 @@ export interface CharacterDef {
   hasBlade: boolean;
   /** Optional GLB asset path (public/assets/2nrt.glb). */
   glbPath?: string;
+  /** Support behaviour when benched (prototype: Attack = combo join / strike back, Guard = dash cut / charge guard, Balance = cover fire). */
+  supportType: SupportType;
+  /** HUD portrait (Storm 2 face_le texture). */
+  portrait?: string;
 }
 
 // ---------------------------------------------------------------------------

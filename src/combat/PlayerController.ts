@@ -34,6 +34,14 @@ export class PlayerController {
     const f = this.fighter;
     f.input.tick(tick);
 
+    // Hitstop (HITSTOP_*): the fighter freezes in place — no state advance, no motion, no animation.
+    if (f.hitstopFrames > 0) {
+      f.hitstopFrames--;
+      f.rig.root.position.copy(f.position);
+      f.rig.root.rotation.y = f.yaw;
+      return;
+    }
+
     // 1-2. State resolution + per-state kinematics
     this.fsm.update(f, dt, cam);
 
@@ -80,6 +88,10 @@ export class PlayerController {
         grounded: f.grounded,
         guardActive: f.state === CombatState.GUARDING,
         charging: f.state === CombatState.DASH_CHARGING,
+        moveDir: f.moveDirLocal,
+        hitDir: f.lastHitDir,
+        falling: !f.grounded && f.velocity.y < -0.5,
+        framesLeft: f.state === CombatState.KNOCKDOWN ? 34 - f.stateFrame : f.stunFrames,
       },
       dt,
     );

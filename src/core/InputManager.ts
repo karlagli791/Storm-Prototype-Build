@@ -15,6 +15,9 @@ export interface KeyBinding {
   sub: string[];
   jutsu: string[];
   switch: string[];
+  throw: string[];
+  charge: string[];
+  support: string[];
   up: string[];
   down: string[];
   left: string[];
@@ -33,6 +36,9 @@ export const P1_BINDINGS: KeyBinding = {
   sub: ['KeyI'],
   jutsu: ['KeyU'],
   switch: ['KeyO'],
+  throw: ['KeyH'],
+  charge: ['KeyN'],
+  support: ['KeyY'],
 };
 
 /** Priority resolution: when multiple actions are buffered on the same frame, higher wins. */
@@ -183,6 +189,9 @@ export class KeyboardInputSource implements InputSource {
     if (this.any(b.sub)) held |= InputFlag.SUB;
     if (this.any(b.jutsu)) held |= InputFlag.JUTSU;
     if (this.any(b.switch)) held |= InputFlag.SWITCH;
+    if (this.any(b.throw)) held |= InputFlag.THROW;
+    if (this.any(b.charge)) held |= InputFlag.CHARGE;
+    if (this.any(b.support)) held |= InputFlag.SUPPORT;
     if (this.any(b.up)) held |= InputFlag.UP;
     if (this.any(b.down)) held |= InputFlag.DOWN;
 
@@ -197,12 +206,17 @@ export class KeyboardInputSource implements InputSource {
         my = gp.ly;
       }
       const b = gp.buttons;
-      if (b[PAD.CIRCLE]) held |= InputFlag.ATTACK; // Circle / B: attack
-      if (b[PAD.CROSS]) held |= InputFlag.JUMP; // Cross / A: jump, ninja move, hollow step
-      if (b[PAD.TRIANGLE] || b[PAD.R2]) held |= InputFlag.DASH | InputFlag.CHAKRA; // Triangle / Y (or R2): chakra dash, hold to charge
-      if (b[PAD.SQUARE]) held |= InputFlag.JUTSU; // Square / X: jutsu
-      if (b[PAD.L2] || b[PAD.L1]) held |= InputFlag.GUARD | InputFlag.SUB; // L2 / L1: guard; the same press during hitstun = substitution
-      if (b[PAD.R1] || b[PAD.R3]) held |= InputFlag.SWITCH; // R1 or R3: leader switch
+      // Authentic Storm layout: Triangle is the chakra button — alone it charges, with Cross it
+      // chakra-dashes, with Circle it fires the jutsu. R2 is a plain dash button for convenience.
+      const tri = b[PAD.TRIANGLE];
+      if (b[PAD.CIRCLE]) held |= tri ? InputFlag.JUTSU : InputFlag.ATTACK; // Circle: attack / Triangle+Circle: jutsu
+      if (b[PAD.CROSS]) held |= tri ? InputFlag.DASH | InputFlag.CHAKRA : InputFlag.JUMP; // Cross: jump / Triangle+Cross: chakra dash
+      if (tri && !b[PAD.CROSS] && !b[PAD.CIRCLE]) held |= InputFlag.CHARGE; // Triangle alone: chakra charge
+      if (b[PAD.R2]) held |= InputFlag.DASH | InputFlag.CHAKRA; // R2: chakra dash (hold to charge)
+      if (b[PAD.SQUARE]) held |= InputFlag.THROW; // Square: shuriken (PL_ACT_PRJ)
+      if (b[PAD.L2]) held |= InputFlag.GUARD | InputFlag.SUB; // L2: guard; the same press during hitstun = substitution
+      if (b[PAD.L1] || b[PAD.R1]) held |= InputFlag.SUPPORT; // L1 / R1: call support (PL_ACT_SUP_COMBO_JOIN)
+      if (b[PAD.R3]) held |= InputFlag.SWITCH; // R3: leader switch
       if (b[PAD.DPAD_UP] || gp.ly > 0.6) held |= InputFlag.UP;
       if (b[PAD.DPAD_DOWN] || gp.ly < -0.6) held |= InputFlag.DOWN;
       // D-pad also moves

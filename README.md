@@ -25,15 +25,18 @@ npm run build      # type-check + production bundle in dist/
 | W A S D | Left stick / D-pad | Move (camera-relative) |
 | Space | Cross / A | Jump. With a direction while running: **Ninja Move** lateral hop |
 | J | Circle / B | Attack. Stick up/down (or D-pad) on a follow-up = **Up / Down** branch |
-| K | Triangle / Y (or R2) | **Chakra Dash** 15%. Hold = **Charged** 25%. Mid-string = **Spark Dash** 20%. Attack then dash within 4 frames = **Turbo Dash** |
+| K | Triangle + Cross (or R2) | **Chakra Dash** 15%. Hold = **Charged** 25%. Mid-string = **Spark Dash** 20%. Attack then dash within 4 frames = **Turbo Dash** |
+| N | Triangle (alone) | **Chakra Charge** (45 %/s, cancels into dash / jutsu / attack) |
+| H | Square / X | **Shuriken** throw (3% chakra, guardable, parryable, dashes pierce it) |
+| Y | L1 / R1 | **Support call** (50% support gauge): the bench fighter runs in for a combo join. Automatic interventions: Balance = Cover Fire, Guard = Dash Cut / Charge Guard, Attack = Strike Back |
 | L / Shift | L2 / L1 | Guard (guard sphere, durability 100, blue → yellow → red) |
 | L + J | L2 + Circle | **Guard Break Counter** (frames 2–7 parry, costs 20% of max chakra for 20 s) |
 | I | L2 during hitstun | **Substitution** (1 of 4 stocks, 14 s sequential recharge) |
-| U | Square / X | Jutsu: Rasengan / Chidori (30% chakra, armored, real `skl1` clips) |
-| O | R1 / R3 | **Leader Switch** (50% support gauge); the outgoing fighter finishes its action |
+| U | Triangle + Circle | Jutsu: Rasengan / Chidori (30% chakra, armored, real `skl1` clips) |
+| O | R3 | **Leader Switch** (50% support gauge); the outgoing fighter finishes its action |
 | Dir + Space in a string / dash startup | | **Hollow Step** jump-cancel |
 | P / R | Options / Create | Pause / rematch |
-| F3 / F4 | | Hitbox visualiser / freeze the AI (training dummy) |
+| F3 / F4 / F5 | | Hitbox visualiser / freeze the AI (training dummy) / next stage |
 
 The controller is polled every tick with a radial deadzone; the on-screen badge turns green when
 Chrome sees the pad (click the page and press any button first).
@@ -115,6 +118,23 @@ in-game debug menu (Battle balance, Camera, Hit display, dummy points, Lua). The
 loose files (no CPK) but every one is wrapped in a `0FF512ED` compressed+encrypted container that
 the community CPK decryptor does not open, so its assets stay locked; the retail Storm 2 data on
 the Drive covers the same content. Launch: `C:\Users\ysoyo\storm2proto\run_proto.cmd`.
+
+## Reverse-engineered vocabulary (Storm 2 prototype)
+
+`docs/proto/xex_vocabulary.md` lists what the decrypted executable (memory-dumped from Xenia)
+exposes: PL_ACT / PL_ANM state names, battle-balance keys, the Lua `cc*` API and hit-sphere names.
+`src/combat/StormStates.ts` maps every engine state to those names and to CC2 clip codes, and
+`BALANCE` carries the balance constants the engine uses.
+
+## Blender cel shading
+
+```bash
+"/c/Program Files/Blender Foundation/Blender 4.5/blender.exe" -b --python tools/scripts/blender_toon.py -- 2nrt docs/render/2nrt_toon.png docs/render/2nrt_toon.blend raw/s4/2nrtbod1.xfbin raw/s4/2nrtbod1c.xfbin raw/s4/2nrtbod1l.xfbin
+```
+
+Builds the "CC2 Toon" node group (diffuse → Shader to RGB → `celshade_ramp.png` row 8 × albedo,
+fresnel rim, stepped specular) and a Solidify inverted-hull outline, renders with EEVEE and saves
+the .blend for hand tuning.
 
 ## Deviations from the blueprint
 

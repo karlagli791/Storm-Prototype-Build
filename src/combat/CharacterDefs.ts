@@ -7,7 +7,7 @@
  * the rig binder resolves these socket names to actual bones; the procedural rig exposes
  * the same names.
  */
-import { CharacterDef, ComboStringDef, HitPriority, HitReaction, HitboxDef, MoveDef } from '../core/Types';
+import { CharacterDef, ComboStringDef, HitPriority, HitReaction, HitboxDef, MoveDef, SupportType } from '../core/Types';
 
 // Socket names shared by both rigs
 export const SOCKET = {
@@ -175,6 +175,8 @@ export const NARUTO_DEF: CharacterDef = {
   ],
   hasBlade: false,
   glbPath: 'assets/2nrt.glb',
+  supportType: 'BALANCE',
+  portrait: 'assets/ui/player_2nrt.png',
 };
 
 // ---------------------------------------------------------------------------
@@ -264,6 +266,8 @@ export const SASUKE_DEF: CharacterDef = {
   ],
   hasBlade: true,
   glbPath: 'assets/2ssk.glb',
+  supportType: 'ATTACK',
+  portrait: 'assets/ui/player_2ssk.png',
 };
 
 export const CHARACTERS: Record<string, CharacterDef> = {

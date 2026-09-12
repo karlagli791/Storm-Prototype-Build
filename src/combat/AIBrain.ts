@@ -94,6 +94,14 @@ export class AIBrain {
         if (dist > 2.5) {
           this.source.moveX = towardX;
           this.source.moveY = towardY;
+          // Shuriken at range, support call when the gauge is up (PL_ACT_PRJ_LAND / SUP_COMBO_JOIN)
+          if (dist > 8 && this.tapTimer <= 0 && this.rng() < 0.12) {
+            this.tap(InputFlag.THROW);
+            this.tapTimer = 0.7;
+          } else if (dist < 6 && f.stats.supportGauge >= 50 && this.tapTimer <= 0 && this.rng() < 0.06) {
+            this.tap(InputFlag.SUPPORT);
+            this.tapTimer = 1.0;
+          }
         } else {
           this.mode = 'COMBO';
         }
