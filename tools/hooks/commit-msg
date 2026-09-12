@@ -1,0 +1,14 @@
+#!/bin/sh
+# Appends the commit subject to CONTINUER.md ("Auto log") and stages it, so the continuer
+# always carries the trail of commits. Skips merges and its own re-entrant runs.
+MSG_FILE="$1"
+[ -n "$CONTINUER_SKIP" ] && exit 0
+SUBJECT=$(sed -n '1p' "$MSG_FILE" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+case "$SUBJECT" in ""|Merge*|fixup!*|squash!*) exit 0;; esac
+ROOT=$(git rev-parse --show-toplevel)
+FILE="$ROOT/CONTINUER.md"
+[ -f "$FILE" ] || exit 0
+STAMP=$(date +"%Y-%m-%d %H:%M")
+printf -- "- %s — %s\n" "$STAMP" "$SUBJECT" >> "$FILE"
+git add "$FILE"
+exit 0
