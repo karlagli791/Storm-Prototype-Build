@@ -115,3 +115,4 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
   something meaningful changes; the auto log is the raw trail.
 
 ## 6. Auto log
+- 2026-09-12 16:37 — Add CONTINUER.md master log, commit-msg auto-log hook and milestone script

@@ -283,7 +283,21 @@ export class FighterRig {
       if (rootB) this.sockets.set(SOCKET.ROOT, rootB);
 
       this.mixer = new THREE.AnimationMixer(scene);
-      for (const c of gltf.animations) this.clips.set(c.name, c);
+      // CC2 clips carry root motion on the root / "trall" bones. The simulation moves the
+      // collider itself, so drop those position tracks to keep the mesh glued to its body.
+      const rootNames = new Set<string>();
+      scene.traverse((o) => {
+        if ((o as THREE.Bone).isBone && (/trall$/i.test(o.name) || /^\w{4}00t0$/i.test(o.name))) rootNames.add(o.name);
+      });
+      for (const c of gltf.animations) {
+        c.tracks = c.tracks.filter((t) => {
+          const dot = t.name.lastIndexOf('.');
+          const node = t.name.slice(0, dot);
+          const prop = t.name.slice(dot + 1);
+          return !(prop === 'position' && rootNames.has(node));
+        });
+        this.clips.set(c.name, c);
+      }
 
       this.root.remove(this.mannequin);
       this.root.add(scene);
