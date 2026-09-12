@@ -1,0 +1,12 @@
+node_modules
+dist
+.vite
+raw/
+tools/*.log
+tools/renders/
+tools/texdump/
+tools/efv.html
+tools/xfbin_addon/
+tools/anm_addon/
+tools/*.zip
+tools/*.pdf

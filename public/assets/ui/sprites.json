@@ -1,0 +1,164 @@
+{
+ "count_0": {
+  "img": "xbattle_count.png",
+  "rect": [
+   5,
+   5,
+   58,
+   73
+  ]
+ },
+ "count_1": {
+  "img": "xbattle_count.png",
+  "rect": [
+   80,
+   5,
+   42,
+   72
+  ]
+ },
+ "count_2": {
+  "img": "xbattle_count.png",
+  "rect": [
+   141,
+   5,
+   56,
+   73
+  ]
+ },
+ "count_3": {
+  "img": "xbattle_count.png",
+  "rect": [
+   206,
+   6,
+   58,
+   72
+  ]
+ },
+ "count_4": {
+  "img": "xbattle_count.png",
+  "rect": [
+   274,
+   4,
+   58,
+   75
+  ]
+ },
+ "count_5": {
+  "img": "xbattle_count.png",
+  "rect": [
+   5,
+   87,
+   56,
+   74
+  ]
+ },
+ "count_6": {
+  "img": "xbattle_count.png",
+  "rect": [
+   74,
+   86,
+   54,
+   74
+  ]
+ },
+ "count_7": {
+  "img": "xbattle_count.png",
+  "rect": [
+   142,
+   87,
+   57,
+   74
+  ]
+ },
+ "count_8": {
+  "img": "xbattle_count.png",
+  "rect": [
+   210,
+   86,
+   54,
+   76
+  ]
+ },
+ "count_9": {
+  "img": "xbattle_count.png",
+  "rect": [
+   275,
+   86,
+   56,
+   78
+  ]
+ },
+ "count_inf": {
+  "img": "xbattle_count.png",
+  "rect": [
+   7,
+   171,
+   119,
+   71
+  ]
+ },
+ "banner_go": {
+  "img": "xbattle_signal_fd00.png",
+  "rect": [
+   433,
+   31,
+   763,
+   340
+  ]
+ },
+ "banner_draw": {
+  "img": "xbattle_signal_fd00.png",
+  "rect": [
+   175,
+   393,
+   434,
+   155
+  ]
+ },
+ "banner_timeup": {
+  "img": "xbattle_signal_fd00.png",
+  "rect": [
+   142,
+   570,
+   493,
+   152
+  ]
+ },
+ "tag_p1": {
+  "img": "xbattle_signal_fd01.png",
+  "rect": [
+   26,
+   2,
+   97,
+   90
+  ]
+ },
+ "tag_p2": {
+  "img": "xbattle_signal_fd01.png",
+  "rect": [
+   15,
+   99,
+   108,
+   92
+  ]
+ },
+ "banner_won": {
+  "img": "xbattle_signal_fd01.png",
+  "rect": [
+   233,
+   6,
+   255,
+   91
+  ]
+ },
+ "banner_defeated": {
+  "img": "xbattle_signal_fd01.png",
+  "rect": [
+   249,
+   114,
+   395,
+   95
+  ]
+ }
+}

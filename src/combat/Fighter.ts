@@ -1,0 +1,242 @@
+/**
+ * Fighter.ts — Fighter entity data + Team (leader/support) container.
+ *
+ * A Fighter is pure simulation state plus a visual rig. Behaviour lives in
+ * CombatStateMachine (transitions) and PlayerController (kinematics). Both fighters on a
+ * team share one CombatStats pool (health, chakra, subs, guard, support gauge).
+ */
+import * as THREE from 'three';
+import { InputManager, InputSource, ScriptedInputSource } from '../core/InputManager';
+import { CharacterDef, ComboBranch, CombatEvent, CombatEventKind, CombatState, HitboxDef, MoveDef } from '../core/Types';
+import { CombatStats } from './CombatStats';
+import { FighterRig } from '../render/FighterRig';
+
+export type DashKind = 'STANDARD' | 'CHARGED' | 'SPARK' | 'TURBO';
+
+export interface EventSink {
+  emit(kind: CombatEventKind, data: Partial<CombatEvent> & { text?: string; color?: number; shake?: number }): void;
+}
+
+let nextFighterId = 1;
+
+export class Fighter {
+  readonly id = nextFighterId++;
+  readonly rig: FighterRig;
+
+  position = new THREE.Vector3();
+  velocity = new THREE.Vector3();
+  yaw = 0;
+  grounded = true;
+
+  state: CombatState = CombatState.IDLE_NEUTRAL;
+  prevState: CombatState = CombatState.IDLE_NEUTRAL;
+  stateFrame = 0;
+
+  // --- move execution
+  currentMove: MoveDef | null = null;
+  comboBranch: ComboBranch = 'NEUTRAL';
+  comboIndex = 0;
+  moveFrame = 0;
+  /** Hitbox ids that already connected during the current move (no double hits). */
+  landedHitIds = new Set<string>();
+  /** Set when an attack input is buffered during the cancel window. */
+  pendingBranch: ComboBranch | null = null;
+
+  // --- dash
+  dashKind: DashKind = 'STANDARD';
+  dashStartupFrames = 7;
+  dashChargeFrames = 0;
+  dashElapsed = 0;
+
+  // --- stun / timers
+  stunFrames = 0;
+  /** Sub is disabled while > 0 (parry crumple). */
+  subLockFrames = 0;
+  /** Frames of intangibility (substitution, get-up). */
+  invulnFrames = 0;
+  parryActive = false;
+  bounceOnLand = false;
+  /** Frame advantage granted after a parry — attacker can't act. */
+  wallSplatNormal = new THREE.Vector3();
+
+  // --- team
+  team: Team | null = null;
+  target: Fighter | null = null;
+  /** True when this fighter is completing an action after being switched out. */
+  autonomous = false;
+  /** Visual-only: white flash timer on hit. */
+  flashTimer = 0;
+  chargeVfxTick = 0;
+
+  switchRequested = false;
+  lastHitBy = -1;
+
+  constructor(public readonly def: CharacterDef, public input: InputManager) {
+    this.rig = new FighterRig(def);
+  }
+
+  get stats(): CombatStats {
+    return this.team!.stats;
+  }
+
+  get isLeader(): boolean {
+    return this.team?.active === this;
+  }
+
+  get airborne(): boolean {
+    return !this.grounded;
+  }
+
+  /** Unit forward vector on the ground plane from yaw. */
+  forward(out: THREE.Vector3): THREE.Vector3 {
+    return out.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+  }
+
+  /** Horizontal distance to target. */
+  distanceToTarget(): number {
+    if (!this.target) return Infinity;
+    const dx = this.target.position.x - this.position.x;
+    const dz = this.target.position.z - this.position.z;
+    return Math.hypot(dx, dz);
+  }
+
+  /** Yaw that faces the target. */
+  yawToTarget(): number {
+    if (!this.target) return this.yaw;
+    return Math.atan2(this.target.position.x - this.position.x, this.target.position.z - this.position.z);
+  }
+
+  enterState(next: CombatState): void {
+    if (this.state === next) {
+      this.stateFrame = 0;
+      return;
+    }
+    this.prevState = this.state;
+    this.state = next;
+    this.stateFrame = 0;
+    if (next !== CombatState.COMBO_STRING && next !== CombatState.JUTSU) {
+      this.currentMove = null;
+      this.moveFrame = 0;
+      this.landedHitIds.clear();
+      this.pendingBranch = null;
+    }
+    if (next !== CombatState.GUARD_COUNTER) this.parryActive = false;
+  }
+
+  beginMove(move: MoveDef, branch: ComboBranch, index: number): void {
+    this.currentMove = move;
+    this.comboBranch = branch;
+    this.comboIndex = index;
+    this.moveFrame = 0;
+    this.landedHitIds.clear();
+    this.pendingBranch = null;
+  }
+
+  /** Active hitboxes for the current move frame. */
+  activeHitboxes(): HitboxDef[] {
+    const m = this.currentMove;
+    if (!m) return [];
+    const f = this.moveFrame;
+    const out: HitboxDef[] = [];
+    for (const hb of m.hitboxes) {
+      if (f >= hb.activeStart && f <= hb.activeEnd && !this.landedHitIds.has(hb.id)) out.push(hb);
+    }
+    return out;
+  }
+
+  /** Is any armored hitbox currently active (used for jutsu-vs-dash override)? */
+  armorActive(): boolean {
+    const m = this.currentMove;
+    if (!m || this.state !== CombatState.JUTSU) return false;
+    for (const hb of m.hitboxes) if (hb.armored && this.moveFrame >= hb.activeStart - 4 && this.moveFrame <= hb.activeEnd) return true;
+    return false;
+  }
+
+  snapshot(tick: number): import('../core/Types').PlayerSyncFrame {
+    const s = this.stats;
+    return {
+      tick,
+      playerId: this.id,
+      characterCode: this.def.code,
+      state: this.state,
+      stateFrame: this.stateFrame,
+      position: [this.position.x, this.position.y, this.position.z],
+      velocity: [this.velocity.x, this.velocity.y, this.velocity.z],
+      yaw: this.yaw,
+      health: s.health,
+      chakra: s.chakra,
+      chakraMax: s.chakraMax,
+      subStocks: s.subStocks,
+      guardHealth: s.guardHealth,
+      supportGauge: s.supportGauge,
+      inputHeld: this.input.buffer.latest.held,
+    };
+  }
+}
+
+/** A team: one active leader and one benched support who share a resource pool. */
+export class Team {
+  readonly stats: CombatStats;
+  active: Fighter;
+  bench: Fighter;
+  /** Fighters currently present in the arena (leader + any autonomous outgoing fighter). */
+  readonly present: Fighter[] = [];
+
+  constructor(public readonly name: string, public readonly slot: number, leader: Fighter, support: Fighter, public humanSource: InputSource) {
+    this.stats = new CombatStats(leader.def.health);
+    this.active = leader;
+    this.bench = support;
+    leader.team = this;
+    support.team = this;
+    this.present.push(leader);
+    leader.rig.root.visible = true;
+    support.rig.root.visible = false;
+  }
+
+  get opponentTarget(): Fighter | null {
+    return this.active.target;
+  }
+
+  /**
+   * Leader Switch: bench fighter appears at the leader's position inheriting translation
+   * vectors; the outgoing leader finishes its current action autonomously, then retreats.
+   */
+  performSwitch(): Fighter {
+    const out = this.active;
+    const inc = this.bench;
+    inc.position.copy(out.position);
+    inc.velocity.copy(out.velocity);
+    inc.yaw = out.yaw;
+    inc.grounded = out.grounded;
+    inc.target = out.target;
+    inc.enterState(out.grounded ? CombatState.IDLE_NEUTRAL : CombatState.JUMPING);
+    inc.invulnFrames = 6;
+    inc.autonomous = false;
+    inc.rig.root.visible = true;
+    // Small lateral offset so the two bodies do not overlap
+    const fwd = new THREE.Vector3(Math.sin(out.yaw), 0, Math.cos(out.yaw));
+    inc.position.addScaledVector(fwd, -0.9);
+
+    // Control transfer: incoming takes the human/AI input, outgoing gets a dead input source
+    inc.input.source = this.humanSource;
+    inc.input.buffer.clear();
+    out.input.source = new ScriptedInputSource();
+    out.input.buffer.clear();
+    out.autonomous = true;
+
+    this.active = inc;
+    this.bench = out;
+    if (!this.present.includes(inc)) this.present.push(inc);
+    return inc;
+  }
+
+  /** Retire an autonomous fighter once its action is finished. */
+  retire(f: Fighter): void {
+    f.rig.root.visible = false;
+    f.autonomous = false;
+    f.enterState(CombatState.IDLE_NEUTRAL);
+    f.velocity.set(0, 0, 0);
+    const i = this.present.indexOf(f);
+    if (i >= 0) this.present.splice(i, 1);
+  }
+}

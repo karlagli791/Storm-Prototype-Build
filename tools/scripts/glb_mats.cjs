@@ -1,0 +1,10 @@
+const fs = require('fs');
+const f = process.argv[2], pat = new RegExp(process.argv[3] || '.', 'i');
+const b = fs.readFileSync(f); const jsonLen = b.readUInt32LE(12); const j = JSON.parse(b.slice(20, 20 + jsonLen).toString('utf8'));
+const imgs = (j.images||[]).map((im, i) => ({ i, name: im.name, mime: im.mimeType, bytes: im.bufferView != null ? j.bufferViews[im.bufferView].byteLength : 0 }));
+console.log('images', imgs.length, imgs.slice(0, 40).map(x => `${x.i}:${x.name}:${x.mime}:${x.bytes}`).join(' '));
+const mats = (j.materials||[]).map((m, i) => ({ i, name: m.name, tex: m.pbrMetallicRoughness && m.pbrMetallicRoughness.baseColorTexture ? j.textures[m.pbrMetallicRoughness.baseColorTexture.index].source : null, alphaMode: m.alphaMode }));
+const sel = mats.filter(m => pat.test(m.name));
+console.log('materials', mats.length, 'untextured', mats.filter(m => m.tex == null).length);
+console.log(sel.slice(0, 30).map(m => `${m.name} -> img ${m.tex} ${m.alphaMode||''}`).join('\n'));
+const untex = mats.filter(m => m.tex == null).slice(0, 25).map(m => m.name); console.log('UNTEXTURED:', untex.join(', '));
