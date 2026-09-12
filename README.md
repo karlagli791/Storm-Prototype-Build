@@ -109,12 +109,12 @@ Clip codes used from the `bod1c` / `bod1l` / `skl1` containers: `nut0` idle, `ru
 
 ## Storm 2 prototype (Hidden Palace, Jul 26 2010)
 
-Assessed, not run. It is a 5.18 GB Xbox 360 disc image that boots in Xenia Canary (create
-`devkit/assertlog.txt` and `devkit/dbglog.txt` first). Its data is the same `.xfbin` format, so the
-pipeline above would ingest anything extracted from it, and the LS debug overlay would expose
-hurtbox / frame data in the emulator. The retail Storm 2 data on the Drive already covers models,
-clips, stages and UI, so the prototype adds research value (debug menu, assert logs) rather than
-assets. Running it means downloading the image and Xenia, which was left for a separate step.
+Run and inspected in Xenia Canary (see `CONTINUER.md` §3a and `docs/proto/`). Boots to CC2's
+debug launcher; Free Battle works end to end with the debug character/stage select and the
+in-game debug menu (Battle balance, Camera, Hit display, dummy points, Lua). The disc holds
+loose files (no CPK) but every one is wrapped in a `0FF512ED` compressed+encrypted container that
+the community CPK decryptor does not open, so its assets stay locked; the retail Storm 2 data on
+the Drive covers the same content. Launch: `C:\Users\ysoyo\storm2proto\run_proto.cmd`.
 
 ## Deviations from the blueprint
 

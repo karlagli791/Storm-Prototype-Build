@@ -33,8 +33,44 @@ runs on the real CyberConnect2 assets.
 **Known gaps / next candidates**
 - Rasengan/Chidori palm dummy (`eff dmy01`) is in the `eff1` container (not imported); hitbox binds to the hand bone.
 - Storm 4 Naruto has a 3-clip neutral string; 4th hit and branches reuse `cmb` clips. Combo digits sprite sheet was not cut (rects failed), text fallback is used.
-- Support "Cover Fire / Dash Cut / Strike Back" interventions from the blueprint are not implemented.
-- Storm 2 prototype in Xenia: in progress (see log).
+- Support "Cover Fire / Dash Cut / Strike Back" interventions from the blueprint are not implemented (the prototype's debug select confirms the three support types: Attack = combo join + strike back, Guard = dash cut + charge guard, Balance = cover fire).
+- Prototype disc files are wrapped/encrypted in a format the retail CPK decryptor does not handle (see §3a); their assets are not extractable yet.
+
+### 3a. Storm 2 prototype (Jul 26 2010) — what was learned by running it
+
+Runs in Xenia Canary 02d2cb5 on this machine (`C:\Users\ysoyo\storm2proto\run_proto.cmd`).
+Screens saved in `docs/proto/`.
+
+- Boots to a **debug launcher** ("STORM2 for Xbox360", version Jul 26 2010 18:08:42): Free Battle,
+  Boss Battle, Adventure, Network Battle, Usually Boot, IA Viewer, Model Viewer; RB toggles
+  language to English, RT region, LB BGM.
+- **Free Battle flow**: match type (P1 vs P2 / P1 vs CPU / CPU vs CPU) → debug character select
+  (full Storm 2 roster incl. unreleased "*" entries: Part 1 Naruto/Sasuke, Sage Naruto no cloak,
+  Sage Naruto black) with leader + 2 supports and the support-type table → stage select (all sd
+  stages by Japanese name) → battle with the final HUD (support LB/RB portraits, item wheel).
+- **In-game debug menu** (LS click): tabs Game / Rendering / System / Debug-menu settings. Game
+  tab: Player, Support chara, **Battle balance adjust**, Battle settings, **Camera**, Display
+  objects, Background, CPU, Save data, Game data, Task manager (CPU load display), **Hit** (hit
+  display submenu: hit display, hit-check count, **dummy point display**, area info, disable bg
+  draw, lens flare off), Interactive action, ADV, ADV aging, **Lua**, Photo mode, XFBIN app memory
+  usage, Low demo, Sound, Reset test. Dummy-point display toggled on did not produce visible
+  markers under Xenia (debug line draws likely not emitted); the menu itself is fully usable.
+- Xenia keyboard mapping (must set `keyboard_mode = 1`): A `;`, B `'`, X `L`, Y `P`, Start `X`,
+  Back `Z`, LB `1`, RB `3`, LT `Q`, RT `E`, LS click `F`, RS click `K`, D-pad Shift+WASD, left
+  stick WASD, right stick arrows. Helper scripts in `C:\Users\ysoyo\storm2proto\`: `focus.ps1`
+  (restore + verify foreground), `key.ps1 <key> [hold] [repeat] [gap] [shift]`, `shotwin.ps1`.
+- **Disc layout**: XGD1 ISO (2048-byte sectors, magic at 0x10000), 12,859 files, no CPK layer —
+  `\data\{spc,stage,ui,pt,rpg,ia,sound,skill,effect,boss,movie,system}` plus a full `data_dummy`
+  mirror, `default.xex`, and **4,534 Lua scripts** (cutscenes `pt\script`, adventure `rpg\script`,
+  IA). `spc` holds `2nrtbod1/bod1c/bod1l/bod1s/eff1/skl1/spl1/spl2/prm/basprm`.
+- **Every data file is wrapped**: header `0F F5 12 ED 01 00 00 00 <hash> …`, high entropy,
+  ~4.8× smaller than the retail decrypted equivalent (2nrtbod1: 1.01 MB vs 4.88 MB) → compressed
+  and encrypted. The community `CC2_CPK_Decrypter.bms` (xorshift keystream keyed on retail CPK
+  headers 8FCF3140 / F0A20061 / 45CD364B / 82C83B4F) does not match this header, so prototype
+  assets and the `prm` frame-data tables stay locked for now. The retail Storm 2 data on the Drive
+  is already decrypted and covers the same files.
+- Extracted tree: `C:\Users\ysoyo\storm2proto\image\disc\proto\` (5.8 GB); copies of the 2nrt/2ssk
+  spc files, skill, system, cmn in `raw/proto/` (git-ignored).
 
 ---
 
@@ -101,7 +137,10 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 
 ### 2026-09-12 — Session 3: prototype + repo
 11. Git repo initialised and pushed to GitHub as `Storm-Prototype-Build` (this file added; commit hook appends future commit subjects below).
-12. Xenia Canary (02d2cb5, 2026-03-24) installed to `C:\Users\ysoyo\storm2proto\xenia`. Prototype 7z (5.18 GB) downloading from the Internet Archive mirror to `C:\Users\ysoyo\storm2proto\image\proto.7z`.
+12. Xenia Canary (02d2cb5, 2026-03-24) installed to `C:\Users\ysoyo\storm2proto\xenia`. Prototype 7z (5.18 GB) downloaded from the Internet Archive mirror (Hidden Palace itself returns 403 to curl) and extracted to `proto.iso`.
+13. Prototype booted in Xenia (devkit `assertlog.txt`/`dbglog.txt` created after first run; `portable.txt`; `keyboard_mode = 1`). Driven with PowerShell key injection: language → English, Free Battle → P1 vs CPU → Naruto + supports vs CPU → Hidden Leaf Forest → battle running; in-game debug menu opened (LS click) and its Game/Hit pages captured. Screens in `docs/proto/`, findings in §3a.
+14. ISO extracted with extract-xiso (12,859 files). Discovered every file is wrapped/encrypted (`0FF512ED` header, compressed); the retail CPK decryptor script does not apply. Documented, not cracked.
+15. Engine fix from soak test: CC2 root-motion position tracks stripped on load so meshes stay on their colliders (6,000-frame random-input soak: no exceptions, no NaN, 24 states exercised).
 
 ---
 
@@ -116,3 +155,4 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 
 ## 6. Auto log
 - 2026-09-12 16:37 — Add CONTINUER.md master log, commit-msg auto-log hook and milestone script
+- 2026-09-12 16:38 — Strip CC2 root-motion position tracks so meshes stay on their colliders
