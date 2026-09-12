@@ -172,3 +172,4 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 - 2026-09-12 16:37 — Add CONTINUER.md master log, commit-msg auto-log hook and milestone script
 - 2026-09-12 16:38 — Strip CC2 root-motion position tracks so meshes stay on their colliders
 - 2026-09-12 17:00 — Storm 2 prototype run in Xenia: debug launcher, battle, debug menu captured; findings + screenshots
+- 2026-09-12 18:44 — Prototype-informed overhaul: XEX vocabulary, hitstop/charge/shuriken/support, common anim bank, Storm 2 HUD, sd01d stage, celshade ramp, Blender toon study
