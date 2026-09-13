@@ -151,6 +151,8 @@ class Game implements EventSink {
     const p2Sup = new Fighter(NARUTO_DEF, new InputManager(new ScriptedInputSource()));
     this.team2 = new Team('P2', 2, p2Lead, p2Sup, aiSrc);
     this.ai = new AIBrain(aiSrc, this.team2);
+    // Training dummy by default: the enemy stands still until F4 (or ?ai=1) enables the AI.
+    this.ai.enabled = new URLSearchParams(location.search).get('ai') === '1';
 
     this.allFighters = [p1Lead, p1Sup, p2Lead, p2Sup];
     for (const f of this.allFighters) {

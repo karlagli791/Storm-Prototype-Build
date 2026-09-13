@@ -36,7 +36,7 @@ npm run build      # type-check + production bundle in dist/
 | O | R3 | **Leader Switch** (50% support gauge); the outgoing fighter finishes its action |
 | Dir + Space in a string / dash startup | | **Hollow Step** jump-cancel |
 | P / R | Options / Create | Pause / rematch |
-| F3 / F4 / F5 | | Hitbox visualiser / freeze the AI (training dummy) / next stage |
+| F3 / F4 / F5 | | Hitbox visualiser / toggle the AI (the enemy starts as a standing training dummy; `?ai=1` starts it on) / next stage |
 
 The controller is polled every tick with a radial deadzone; the on-screen badge turns green when
 Chrome sees the pad (click the page and press any button first).
