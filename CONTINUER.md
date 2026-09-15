@@ -149,6 +149,14 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 - **Awakened forms**: `awakenedFor(def, awCode, prefix)` builds a second `CharacterDef` from the table's awakening entries (clips `2nrvawa…`); `Fighter.setAwakenedForm` swaps `def` and the rig (a second `FighterRig` for different bodies). `gen_prm_ts.cjs` reads the awakened GLB too. Same-body awakenings (Gaara/Itachi/Deidara `aws`) need their moveset containers — the `aws` files only hold the transformation effects.
 - **Victim demo clips** (`skl1_dmg*`, `spl1_dmg`) animate the common `1cmnbod1` armature in the game data, so they are not in the character GLBs; the plan is to export them into `cmn_anims.glb` (the rig's common-bank retarget then serves them to every character) — `FighterRig.importDemoClips` + the `PL_ACT_DMG_DEMO` hitstun binding are in place.
 - **Screenshots from the browser tool** are scaled captures; a quarter-size frame there is not a viewport bug (the drawing buffer and viewport were verified).
+- **Jumps (session 10)**: every jump is a `JUMPING` launch through `beginJump` — fixed horizontal speed (`JUMP_H_SPEED` 7.2) along the stick, `JUMP_VELOCITY` 13 with `JUMP_GRAVITY_SCALE` 0.8 (≈1.2 s air, 3.2 m apex, identical in all directions), the direction is taken relative to the *target* so the directional hop clips (`dsf0/dsb0/dsl0/dsr0`) match the travel. The air press is a second full jump (`DOUBLE_JUMP_VELOCITY`). The old bug where jumps "cancelled early" was the fall binding replacing the take-off clip at the apex (`falling` is now only for falls, via `Fighter.jumpLaunch`). The ninja-move hop projected the stick onto the lock-on tangent, which turned forward jumps sideways; it is no longer used for ground jumps.
+- **Hit registration**: opening strikes home in (up to 7 m, 11 m for the ranged lunge; the wind-up holds up to 16 frames while closing), and `HitboxManager.testHitbox` has a body-column fallback (attacker facing the defender within 1.3 m + box radius during active frames). Table moves that open with a frame-1 chest marker are skipped when picking the first real strike.
+- **String inputs**: fresh forward tilt (≤ 6 frames) + ○, or ○ while running in from > 4.5 m → `FAR` string (the table's `ATK_FAR` / `cmr` moves); up / down held → launcher / tilt strings. Once a strike is out it cancels into ultimate, jutsu (full gauge = ultimate), jump / double jump, or shuriken.
+- **Guard roll**: a stick flick while guarding → `DODGE` (11 m/s, 12 invulnerable frames, 24 frames, back to guard if held).
+- **Chakra dash clips**: `dsh0s → dsh0l` (begin / loop); `dsh1l` is the *back* dash loop and was the "rolling" look.
+- **Stage outlines**: `ArenaEnvironment.computeBounds` marches 72 rays over the named floor (fallback: any solid stage geometry; fallback: flat ground), stops at ledges > 1.6 m, then casts waist-height rays against visible walls / cliffs / tree lines / buildings (hits under 12 m ignored), capped at 42 m. `constrain` clamps to that outline and kills walking momentum at the edge (no sliding). `groundY(x, z, refY)` returns the highest surface at or below the feet (+0.6 m), ignores pits below −4 m, and the old y ≥ 0 clamp is gone — that clamp plus the first-hit-under-4 m rule caused the levitation. The game's own `*hit*` collision meshes export as 1–12-triangle placeholders and `StageInfo.bin` holds per-object placement records, so neither gives a usable battle radius.
+- **ElementFX** (`src/render/ElementFX.ts`): per-character chakra effects in code, layered as polygon (swirl ball / shock dome / arc) + edge (lightning ribbons, wind ribbons, slash arcs) + vertex (sparks, gravel, droplets, flames) + low-opacity airflow (ground wave + rising wind), following the Storm-4-inspired Unity breakdown on realtimevfx.com. `Roster.ts` assigns each fighter an `element`, `ultElement` and `chakraColor` from who they are (Rasengan wind, Chidori lightning, Fire Style, sand, clay, water, Gentle Fist, strength, taijutsu, poison, Almighty Push, blades, chakra scalpel, dark lightning).
+- **NSC Toolbox** is a GUI-only Windows editor for Storm Connections / Storm 4 files (no CLI); nothing in it replaces the export pipeline here.
 - **Resources are shared per team** (health, chakra, subs, guard, support) so leader switch keeps one pool.
 
 ---
@@ -218,6 +226,13 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 44. Presentation: post-processing pass (motion blur, shockwave refraction, aberration, impact frames, heat), smear frames, ground rings / gusts / dust / cracks, stage lighting on the cel materials.
 45. Awakened forms: Naruto and Sasuke swap to their awakened bodies and movesets; victim demo-clip plumbing.
 
+### 2026-09-16 — Session 10: playtest round 3
+46. Movement: uniform directional jumps and double jump, correct directional clips, no substitution smoke on jumps, smear frames only on attacks / specials, guard roll, chakra dash clips fixed.
+47. Combat: homing opening strikes + body-column hit fallback (hits land in and out of combos), ranged lunge string, cancels into jutsu / ultimate / jump / shuriken, release of fighters held by an interrupted cinematic, frozen-state watchdog.
+48. Stages: walkable outlines from floor + wall geometry (42 m cap), no sliding at the edge, no levitation (feet-relative ground height, pit guard, no y ≥ 0 clamp); all 21 stages swept.
+49. Presentation: ElementFX chakra effects per character (jutsu in hand, impacts, auras, ultimate cinematics), slower smootherstep combo camera with hold, staggered round-intro camera, victory pose outro, muted attract match behind the menus.
+50. Tooling: `tools/scripts/soak_test.js` (stuck / frozen / levitate / sink / outside / slide / NaN detector).
+
 ---
 
 ## 5. How this file updates itself
@@ -247,3 +262,4 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 - 2026-09-15 08:26 — Version 0.6.0 (part 1): full game package — menus, team of three, 24 fighters, 21 stages, post FX
 - 2026-09-15 08:31 — Ultimate rush closes in with a wider contact box; COM difficulty scales the AI; 2P keyboard docs
 - 2026-09-15 08:52 — Version 0.6.0 (part 2): final character and stage exports, common bank with victim demo clips, frame data
+- 2026-09-15 09:02 — Version 0.6.0

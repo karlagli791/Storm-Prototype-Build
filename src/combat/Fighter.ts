@@ -109,6 +109,20 @@ export class Fighter {
   throwRequested = false;
   /** Side of a throw started out of a ninja move (PRJ_DL / PRJ_DR clips); null = neutral throw. */
   throwDir: HitDir | null = null;
+  /** Direction of the current jump / roll relative to the target (clip choice). */
+  jumpDirLocal: HitDir | null = null;
+  /** True while the jump in progress was launched from the ground or the air (not a fall). */
+  jumpLaunch = false;
+  /** Id of the fighter whose cinematic is holding this one (0 = free). */
+  heldBy = 0;
+  /** Frames the opening strike spent closing distance. */
+  approachFrames = 0;
+  /** Stick magnitude on the previous tick (flick detection). */
+  prevStickMag = 0;
+  /** Round intro: frames before this fighter's entry clip starts (the camera visits 1P first). */
+  introDelay = 0;
+  /** Consecutive ticks spent frozen in hitstop (watchdog). */
+  frozenTicks = 0;
 
   /** The definition in force (swapped to `awakenedDef` while awakened). */
   def: CharacterDef;
@@ -180,6 +194,7 @@ export class Fighter {
     this.prevState = this.state;
     this.state = next;
     this.stateFrame = 0;
+    if (next !== CombatState.JUMPING) this.jumpLaunch = false;
     if (next !== CombatState.COMBO_STRING && next !== CombatState.JUTSU) {
       this.currentMove = null;
       this.moveFrame = 0;

@@ -53,6 +53,7 @@ export class ArenaEnvironment {
   /** Remove the bound stage (used when cycling stages) and show the procedural arena again. */
   unloadStage(): void {
     this.radius = ARENA_RADIUS;
+    this.limits = null;
     if (this.stageRoot) {
       this.group.remove(this.stageRoot);
       this.stageRoot.traverse((o) => {
@@ -72,7 +73,15 @@ export class ArenaEnvironment {
   }
 
   private floorMeshes: THREE.Mesh[] = [];
-  private heightCache = new Map<number, number>();
+  /** Cached floor hits per 0.5 m cell: every surface height under the cell, highest first. */
+  private heightCache = new Map<number, number[]>();
+  /** Walkable outline: max distance from the arena centre per angle (72 samples), null = circle. */
+  private limits: Float32Array | null = null;
+  /** Visible vertical stage geometry (walls, cliffs, rocks, tree lines, buildings) that bounds the arena. */
+  private obstacles: THREE.Mesh[] = [];
+  /** Solid stage geometry fighters may stand on when the named floor meshes do not cover the arena. */
+  private walkCandidates: THREE.Mesh[] = [];
+  private sideRay = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(1, 0, 0), 0, 80);
   private heightRay = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 400);
 
   /**
@@ -80,22 +89,116 @@ export class ArenaEnvironment {
    * Raycast against the stage's floor meshes, cached on a 0.5 m grid (the ray only fires for cells
    * nobody has visited yet). Flat 0 when no stage floor is loaded.
    */
-  groundY(x: number, z: number): number {
-    if (!this.floorMeshes.length) return 0;
+  /** Every floor surface height under (x, z), highest first (cached on a 0.5 m grid). */
+  private sampleCell(x: number, z: number): number[] {
     const gx = Math.round(x * 2), gz = Math.round(z * 2);
     const key = (gx + 4096) * 8192 + (gz + 4096);
-    const hit = this.heightCache.get(key);
-    if (hit !== undefined) return hit;
+    let ys = this.heightCache.get(key);
+    if (ys) return ys;
     this.heightRay.ray.origin.set(gx * 0.5, 120, gz * 0.5);
     const res = this.heightRay.intersectObjects(this.floorMeshes, false);
-    let y = 0;
-    if (res.length) {
-      // Take the first hit at or below +4 m (canopy / bridge decks above the arena are skipped).
-      const h = res.find((r) => r.point.y <= 4.0) ?? res[res.length - 1];
-      y = h.point.y;
+    // Pit guard: surfaces far below the battle floor (shafts, river beds, skirts) are never ground.
+    ys = res.map((r) => r.point.y).filter((y) => y > -4);
+    this.heightCache.set(key, ys);
+    return ys;
+  }
+
+  /**
+   * Floor height under (x, z). With `refY` (the fighter's current height) the result is the highest
+   * surface at or below the feet plus a small step — fighters stand on the ground they are on instead
+   * of popping up onto a roof, bridge deck or canopy above them. Without it: the first surface under
+   * +4 m (legacy behaviour for effects).
+   */
+  groundY(x: number, z: number, refY?: number): number {
+    if (!this.floorMeshes.length) return 0;
+    const ys = this.sampleCell(x, z);
+    if (!ys.length) return 0;
+    if (refY === undefined) {
+      for (const y of ys) if (y <= 4.0) return y;
+      return ys[ys.length - 1];
     }
-    this.heightCache.set(key, y);
-    return y;
+    for (const y of ys) if (y <= refY + 0.6) return y;
+    return ys[ys.length - 1];
+  }
+
+  /**
+   * Walkable outline of the loaded stage: march outward along 72 rays over the floor meshes and stop
+   * where the floor ends or jumps by more than a ledge (wall, cliff, building). Movement is limited to
+   * this outline, so fighters stay inside the area the stage was authored for.
+   */
+  private computeBounds(): void {
+    const N = 72;
+    const poor = (l: Float32Array | null) => !l || l.filter((v) => v < 12).length > N / 2;
+    let lim = this.floorMeshes.length ? this.marchFloor(N) : null;
+    if (poor(lim) && this.walkCandidates.length) {
+      // The named floor does not cover the arena (villages, hideouts): stand on solid stage geometry.
+      this.floorMeshes = this.walkCandidates;
+      this.heightCache.clear();
+      lim = this.marchFloor(N);
+    }
+    if (poor(lim)) {
+      // No usable floor at all: flat ground at 0, bounded by walls and cliffs only.
+      this.floorMeshes = [];
+      this.heightCache.clear();
+      lim = new Float32Array(N).fill(42);
+    }
+    const L = lim as Float32Array;
+    for (let i = 0; i < N; i++) {
+      const ang = (i / N) * Math.PI * 2;
+      let edge = L[i];
+      // Walls, cliffs, tree lines and buildings at waist height close the arena earlier than the floor.
+      if (this.obstacles.length) {
+        this.sideRay.ray.origin.set(0, 1.0, 0);
+        this.sideRay.ray.direction.set(Math.cos(ang), 0, Math.sin(ang));
+        this.sideRay.far = Math.max(1, edge + 1);
+        const h = this.sideRay.intersectObjects(this.obstacles, false).find((r) => r.distance >= 12);
+        if (h) edge = Math.min(edge, h.distance - 1.2);
+      }
+      // Storm free-battle scale: the fight happens inside roughly a 42 m radius even on huge maps.
+      L[i] = Math.max(9, Math.min(42, edge));
+    }
+    // A single long spike (a corridor between walls) does not open the arena up.
+    const out = new Float32Array(N);
+    for (let i = 0; i < N; i++) out[i] = Math.min(L[i], (L[(i + N - 1) % N] + L[(i + 1) % N]) * 0.5 + 4);
+    this.limits = out;
+    let mx = 0;
+    for (const v of out) mx = Math.max(mx, v);
+    this.radius = Math.min(75, Math.max(ARENA_RADIUS, mx));
+  }
+
+  /** Floor march per ray: distance until the floor ends or steps like a wall / cliff (null = no floor at the centre). */
+  private marchFloor(N: number): Float32Array | null {
+    const step = 1.5, maxR = 60;
+    if (!this.sampleCell(0, 0).length) return null;
+    const lim = new Float32Array(N);
+    const y0 = this.groundY(0, 0, 1);
+    for (let i = 0; i < N; i++) {
+      const ang = (i / N) * Math.PI * 2;
+      const cx = Math.cos(ang), cz = Math.sin(ang);
+      let prev = y0, last = 0;
+      for (let r = step; r <= maxR; r += step) {
+        const ys = this.sampleCell(cx * r, cz * r);
+        if (!ys.length) break;
+        let best = ys[0], bd = Math.abs(ys[0] - prev);
+        for (const y of ys) { const d = Math.abs(y - prev); if (d < bd) { bd = d; best = y; } }
+        if (bd > 1.6) break;
+        prev = best;
+        last = r;
+      }
+      lim[i] = last - 1.0;
+    }
+    return lim;
+  }
+
+  /** Allowed distance from the centre in a direction (angle = atan2(z, x)). */
+  limitAt(angle: number): number {
+    const L = this.limits;
+    if (!L) return this.radius;
+    const N = L.length;
+    let f = (angle / (Math.PI * 2)) * N;
+    f = ((f % N) + N) % N;
+    const i = Math.floor(f), t = f - i;
+    return L[i] * (1 - t) + L[(i + 1) % N] * t;
   }
 
   async tryLoadStage(path: string): Promise<boolean> {
@@ -228,6 +331,20 @@ export class ArenaEnvironment {
         m.frustumCulled = false;
         m.castShadow = false;
       });
+      this.obstacles = [];
+      this.walkCandidates = [];
+      scene.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh || !m.visible || floorMeshes.includes(m)) return;
+        const mm = (Array.isArray(m.material) ? m.material[0] : m.material) as THREE.ShaderMaterial & { name?: string };
+        const nm = `${m.name} ${mm?.name ?? ''}`;
+        if (/kusa|gls|grass|ha0|leaf|eda|art|shadow|kage|light|glow|flare|sky|enkei|bac0|back0|cloud|water|river|fog|eff/i.test(nm)) return;
+        const b = new THREE.Box3().setFromObject(m);
+        if (b.min.y < 3 && b.max.y > -4) this.walkCandidates.push(m);
+        if (b.max.y - b.min.y < 1.6 || b.min.y > 2.5) return; // low clutter or overhead geometry
+        this.obstacles.push(m);
+      });
+      this.computeBounds();
       this.stageRoot = scene;
       this.heightCache.clear();
       this.stageName = path.split('/').pop() ?? path;
@@ -360,7 +477,7 @@ export class ArenaEnvironment {
     res.vn = 0;
     res.splatQualified = false;
 
-    const limit = this.radius - colliderRadius;
+    const limit = this.limitAt(Math.atan2(pos.z, pos.x)) - colliderRadius;
     const rxz = Math.hypot(pos.x, pos.z);
     if (rxz >= limit && rxz > 1e-6) {
       const s = limit / rxz;
@@ -379,11 +496,14 @@ export class ArenaEnvironment {
       if (vn < 0) {
         vel.addScaledVector(n, -vn); // v_tangent = v - (v.n) n
       }
+      // Walking / jumping into the edge stops you there instead of sliding along it.
+      if (!isKnockback) { vel.x *= 0.35; vel.z *= 0.35; }
     }
 
-    // Floor
-    if (pos.y < 0) {
-      pos.y = 0;
+    // Safety floor only below the pit guard: terrain height is resolved by groundY in the controller,
+    // so fighters can stand on ground lower than the arena centre instead of hovering at y = 0.
+    if (pos.y < -4) {
+      pos.y = -4;
       if (vel.y < 0) vel.y = 0;
     }
     // Ceiling

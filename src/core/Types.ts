@@ -55,7 +55,14 @@ export const NINJA_MOVE_SPEED = 11.0;
 export const HOLLOW_STEP_SPEED = 7.5;
 export const HOLLOW_STEP_FRAMES = 12;
 export const GRAVITY = -32.0;
-export const JUMP_VELOCITY = 12.0;
+export const JUMP_VELOCITY = 13.0;
+/** Horizontal speed of a directional jump — identical for every direction. */
+export const JUMP_H_SPEED = 7.2;
+export const DOUBLE_JUMP_VELOCITY = 12.0;
+/** Ninja jumps fall slower than knockback: about one second of air per jump. */
+export const JUMP_GRAVITY_SCALE = 0.8;
+/** Guard roll speed. */
+export const DODGE_SPEED = 11.0;
 
 // ---------------------------------------------------------------------------
 // Combat state enum
@@ -99,6 +106,10 @@ export enum CombatState {
   ULTIMATE = 'ULTIMATE',
   /** PL_ACT_AWAKE_BEGIN — awakening transformation. */
   AWAKEN = 'AWAKEN',
+  /** Guard roll (a stick flick while guarding). */
+  DODGE = 'DODGE',
+  /** Victory pose after the round (win10 / win11). */
+  WIN = 'WIN',
 }
 
 /** States in which an incoming hit can be substituted out of. */
@@ -279,7 +290,9 @@ export interface MoveDef {
   clip: string;
 }
 
-export type ComboBranch = 'NEUTRAL' | 'UP' | 'DOWN' | 'AIR';
+export type ComboBranch = 'NEUTRAL' | 'UP' | 'DOWN' | 'AIR' | 'FAR';
+/** Chakra nature of a character's jutsu — drives the procedural effects (ElementFX). */
+export type ElementKind = 'wind' | 'lightning' | 'fire' | 'water' | 'sand' | 'explosion' | 'gentle' | 'strength' | 'taijutsu' | 'poison' | 'push' | 'blade' | 'scalpel' | 'dark';
 
 export interface ComboStringDef {
   branch: ComboBranch;
@@ -329,6 +342,13 @@ export interface CharacterDef {
   awClipInfix?: string;
   /** Aerial string (○ while airborne); the last hit spikes the enemy down. */
   airString?: ComboStringDef;
+  /** Ranged lunge string (ATK_FAR / cmr clips): a fresh forward tilt + ○, or ○ while running in. */
+  farString?: ComboStringDef;
+  /** Effect style for jutsu / charge / impacts, and for the ultimate when it differs. */
+  element?: ElementKind;
+  ultElement?: ElementKind;
+  /** Chakra colour used by auras and jutsu effects. */
+  chakraColor?: number;
   /** Ultimate jutsu (SPSKILL): name, clip prefix (spl1) and sound cue. */
   ultimateName?: string;
   ultimateClip?: string;

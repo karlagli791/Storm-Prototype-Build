@@ -30,7 +30,9 @@ Balance); 24 fighters, 21 stages. Player 2 uses the second controller or the arr
 | Keyboard | PS5 / Xbox pad | Action |
 | --- | --- | --- |
 | W A S D | Left stick / D-pad | Move (camera-relative) |
-| Space | Cross / A | Jump. With a direction while running: **Ninja Move** lateral hop |
+| Space | Cross / A | Jump — with a direction it leaps that way (forward / back / side / diagonal, same distance and air time); again in the air = double jump |
+| W/↑ tap + J | Forward tilt + ○ | **Ranged lunge** (the character's ATK_FAR moves); ○ while running in from range does the same |
+| L + direction | L2 + stick flick | **Guard roll** (brief invulnerability) |
 | J | Circle / B | Attack. Stick up/down (or D-pad) on a follow-up = **Up / Down** branch |
 | K | Triangle + Cross (or R2) | **Chakra Dash** 15%. Hold = **Charged** 25%. Mid-string = **Spark Dash** 20%. Attack then dash within 4 frames = **Turbo Dash** |
 | N | Triangle (alone) | **Chakra Charge** (45 %/s, cancels into dash / jutsu / attack). Hold it at ≤50% health to **Awaken** (20 s, +30% damage, aura) |
@@ -44,7 +46,7 @@ Balance); 24 fighters, 21 stages. Player 2 uses the second controller or the arr
 | I | L2 during hitstun | **Substitution** (1 of 4 stocks, 14 s sequential recharge) |
 | U | Triangle + Circle | Jutsu: Rasengan / Chidori (30% chakra, armored, real `skl1` clips) |
 | O | R3 | **Leader Switch** (50% support gauge); the outgoing fighter finishes its action |
-| Dir + Space in a string / dash startup | | **Hollow Step** jump-cancel |
+| Space / U / M / H during a string | | **Cancels**: jump or double jump, jutsu, ultimate, shuriken |
 | P / R | Options / Create | Pause / rematch |
 | 2P keyboard | (Options → 2P device) | Arrows move · Numpad 1 attack · 2 dash · 0 jump · 3 guard · 4 jutsu · 5 shuriken · 6 charge · 7 / 9 supports · 8 switch · . substitution · Enter ultimate |
 | F3 / F4 / F5 | | Hitbox visualiser / toggle the AI (the enemy starts as a standing training dummy; `?ai=1` starts it on) / next stage |

@@ -116,6 +116,20 @@ export class HitboxManager {
         return true;
       }
     }
+    // Body-column fallback: during the active frames a strike connects when the attacker faces the
+    // defender at striking distance, even if the swinging socket misses the hurt spheres (retargeted
+    // clips, awakened bodies, short characters).
+    const dx = defender.position.x - attacker.position.x, dz = defender.position.z - attacker.position.z;
+    const hd = Math.hypot(dx, dz);
+    const dy = defender.position.y - attacker.position.y;
+    if (hd <= 1.3 + Math.min(1.0, hb.radius * 0.6) && Math.abs(dy) < 1.7) {
+      const fx = Math.sin(attacker.yaw), fz = Math.cos(attacker.yaw);
+      if (hd < 0.6 || (dx * fx + dz * fz) / hd > 0.3) {
+        const k = 0.25 / Math.max(hd, 1e-3);
+        this.closest.set(defender.position.x - dx * k, defender.position.y + 1.0, defender.position.z - dz * k);
+        return true;
+      }
+    }
     return false;
   }
 

@@ -9,7 +9,7 @@
  * Mifune's icon is from Storm 3; Indra (a Storm Connections rip) borrows Sasuke's moveset via
  * `animBank` and has its portraits rendered from the model (tools/scripts/render_portraits.py).
  */
-import { CharacterDef, ComboStringDef, HitPriority, HitReaction, HitboxDef, JutsuProjectile, MoveDef, SupportType } from '../core/Types';
+import { CharacterDef, ElementKind, ComboStringDef, HitPriority, HitReaction, HitboxDef, JutsuProjectile, MoveDef, SupportType } from '../core/Types';
 import { NARUTO_DEF, SASUKE_DEF, SOCKET } from './CharacterDefs';
 import { PRM, PrmEntry, PrmHit } from './PrmData';
 
@@ -111,7 +111,7 @@ function moveFromPrm(code: string, e: PrmEntry, blade: boolean, name: string, ex
 
 /** Strings derived from the table: ATK00-02 (+ the first SMASH finisher) = neutral, RISE entries = up,
  *  the tilt entries = down, ATK_AIR00.. = air. Returns null when the table has no usable ground string. */
-export function stringsFromPrm(code: string, blade: boolean, clipPrefix?: string): { neutral: ComboStringDef; up: ComboStringDef; down: ComboStringDef; air: ComboStringDef | null } | null {
+export function stringsFromPrm(code: string, blade: boolean, clipPrefix?: string): { neutral: ComboStringDef; up: ComboStringDef; down: ComboStringDef; air: ComboStringDef | null; far: ComboStringDef | null } | null {
   const raw = PRM[code];
   if (!raw) return null;
   // Base moveset = entries whose clip carries the character code without an awakening infix;
@@ -144,7 +144,11 @@ export function stringsFromPrm(code: string, blade: boolean, clipPrefix?: string
   const lastUp = up.moves[up.moves.length - 1]?.hitboxes[0];
   if (lastUp && lastUp.reaction === HitReaction.STAGGER) { lastUp.reaction = HitReaction.LAUNCH; lastUp.launch = 12.5; lastUp.hitstunFrames = 45; }
   if (air) { const la = air.moves[air.moves.length - 1].hitboxes; for (const h of la) { h.reaction = HitReaction.SPIKE; h.launch = -16; } }
-  return { neutral, up, down, air };
+  // Ranged lunge string (ATK_FAR00.. → cmr clips) with a long homing step.
+  const farEntries = ['ATK_FAR00', 'ATK_FAR01', 'ATK_FAR02'].map(get).filter((e): e is PrmEntry => !!e && e.hits.length > 0);
+  const farMoves = farEntries.map((e, i) => mk(`f${i}`, e)!).map((m) => ({ ...m, forwardStep: Math.max(m.forwardStep, 5) }));
+  const far: ComboStringDef | null = farMoves.length ? { branch: 'FAR', moves: farMoves } : null;
+  return { neutral, up, down, air, far };
 }
 
 export function makeTemplateDef(o: TemplateOpts): CharacterDef {
@@ -205,7 +209,7 @@ export function makeTemplateDef(o: TemplateOpts): CharacterDef {
   const fromPrm = stringsFromPrm(bank, !!o.blade);
   if (fromPrm && bank !== c) {
     // Borrowed bank (Indra ← Sasuke): the retargeted clips carry this character's code.
-    for (const st of [fromPrm.neutral, fromPrm.up, fromPrm.down, fromPrm.air]) if (st) for (const m of st.moves) { m.clip = m.clip.replace(bank, c); m.name = m.name.replace(bank, c); }
+    for (const st of [fromPrm.neutral, fromPrm.up, fromPrm.down, fromPrm.air, fromPrm.far]) if (st) for (const m of st.moves) { m.clip = m.clip.replace(bank, c); m.name = m.name.replace(bank, c); }
   }
   return {
     code: c,
@@ -224,6 +228,7 @@ export function makeTemplateDef(o: TemplateOpts): CharacterDef {
     downString: fromPrm?.down ?? down,
     jutsu,
     airString: fromPrm?.air ?? air,
+    farString: fromPrm?.far ?? undefined,
     ultimateName: o.ultimateName,
     ultimateClip: `${bank}spl1_s`,
     jutsuSfx: o.jutsuSfx,
@@ -307,7 +312,7 @@ export function awakenedFor(def: CharacterDef, awCode: string, prefix: string, n
   const aw: CharacterDef = {
     ...def, code: awCode, glbPath: `assets/${awCode}.glb`, voiceCode: def.voiceCode ?? def.code, awakenedDef: undefined, awakenedCode: undefined, animBank: undefined, awClipInfix: prefix.slice(4),
     displayName: def.displayName, title: name,
-    neutralString: st?.neutral ?? def.neutralString, upString: st?.up ?? def.upString, downString: st?.down ?? def.downString, airString: st?.air ?? def.airString,
+    neutralString: st?.neutral ?? def.neutralString, farString: st?.far ?? def.farString, upString: st?.up ?? def.upString, downString: st?.down ?? def.downString, airString: st?.air ?? def.airString,
   };
   return aw;
 }
@@ -319,11 +324,53 @@ const art = (code: string) => ({ icon: `assets/ui/sel/icon_${code}.png`, stand: 
 const airFor = (code: string): ComboStringDef => makeTemplateDef({ code, displayName: code, title: '', jutsuName: '', supportType: 'BALANCE', color: 0xffffff }).airString!;
 const nrtPrm = stringsFromPrm('2nrt', false);
 const sskPrm = stringsFromPrm('2ssk', true);
-export const NARUTO_SEL: CharacterDef = { ...NARUTO_DEF, title: 'Hidden Leaf · Jinchuriki of the Nine-Tails', jutsuName: 'Rasengan', ...art('2nrt'), airString: nrtPrm?.air ?? airFor('2nrt'), ...(nrtPrm ? { neutralString: nrtPrm.neutral, upString: nrtPrm.up, downString: nrtPrm.down } : {}), ultimateName: 'Giant Rasengan', ultimateClip: '2nrtspl1_s', jutsuSfx: 'rasen', ultimateSfx: 'rasen2', awakenedCode: '2nrv', awakenedName: 'Nine-Tails Chakra' };
-export const SASUKE_SEL: CharacterDef = { ...SASUKE_DEF, title: 'Taka · Sharingan', jutsuName: 'Chidori', ...art('2ssk'), airString: sskPrm?.air ?? airFor('2ssk'), ...(sskPrm ? { neutralString: sskPrm.neutral, upString: sskPrm.up, downString: sskPrm.down } : {}), ultimateName: 'Kirin', ultimateClip: '2sskspl1_s', jutsuSfx: 'adv_chidori', ultimateSfx: 'raikiriHit', awakenedCode: '2ssv', awakenedName: 'Curse Mark' };
+export const NARUTO_SEL: CharacterDef = { ...NARUTO_DEF, title: 'Hidden Leaf · Jinchuriki of the Nine-Tails', jutsuName: 'Rasengan', ...art('2nrt'), airString: nrtPrm?.air ?? airFor('2nrt'), ...(nrtPrm ? { neutralString: nrtPrm.neutral, upString: nrtPrm.up, downString: nrtPrm.down, farString: nrtPrm.far ?? undefined } : {}), ultimateName: 'Giant Rasengan', ultimateClip: '2nrtspl1_s', jutsuSfx: 'rasen', ultimateSfx: 'rasen2', awakenedCode: '2nrv', awakenedName: 'Nine-Tails Chakra' };
+export const SASUKE_SEL: CharacterDef = { ...SASUKE_DEF, title: 'Taka · Sharingan', jutsuName: 'Chidori', ...art('2ssk'), airString: sskPrm?.air ?? airFor('2ssk'), ...(sskPrm ? { neutralString: sskPrm.neutral, upString: sskPrm.up, downString: sskPrm.down, farString: sskPrm.far ?? undefined } : {}), ultimateName: 'Kirin', ultimateClip: '2sskspl1_s', jutsuSfx: 'adv_chidori', ultimateSfx: 'raikiriHit', awakenedCode: '2ssv', awakenedName: 'Curse Mark' };
 
 /** Select-screen order (Storm 2 layout: heroes first, then the Shippuden roster). */
 export const ROSTER: CharacterDef[] = [withAwakening(NARUTO_SEL, '2nrv', '2nrvawa', 'Nine-Tails Chakra Mode'), withAwakening(SASUKE_SEL, '2ssv', '2ssvawa', 'Curse Mark: Second State'), SAKURA_DEF, KAKASHI_DEF, MINATO_DEF, JIRAIYA_DEF, TSUNADE_DEF, OROCHIMARU_DEF, GAARA_DEF, LEE_DEF, NEJI_DEF, HINATA_DEF, GUY_DEF, withAwakening(ITACHI_DEF, '2itc', '2itcaws', 'Susano\'o'), KISAME_DEF, DEIDARA_DEF, HIDAN_DEF, TOBI_DEF, PAIN_DEF, BEE_DEF, KABUTO_DEF, SUIGETSU_DEF, MIFUNE_DEF, INDRA_DEF];
+
+/**
+ * Chakra nature per character (what their jutsu actually are in the series), used by ElementFX:
+ * Naruto / Minato / Jiraiya — Rasengan (wind-swirl chakra); Sasuke / Kakashi — Chidori / Lightning
+ * Blade; Itachi / Tobi — Fire Style (Itachi's ultimate: Amaterasu); Gaara — sand; Deidara —
+ * explosive clay; Kisame / Suigetsu — water; Neji / Hinata — Gentle Fist; Tsunade / Sakura —
+ * chakra-enhanced strength; Lee / Guy — pure taijutsu (Guy's Morning Peacock burns); Orochimaru —
+ * snakes / poison; Pain — Almighty Push; Hidan / Mifune / Killer Bee — blades (Bee's lariat is
+ * raw strength); Kabuto — chakra scalpel; Indra — dark Susano'o lightning.
+ */
+const CHAKRA: Record<string, { element: ElementKind; chakraColor: number; ultElement?: ElementKind }> = {
+  '2nrt': { element: 'wind', chakraColor: 0x6fd0ff },
+  '2nrv': { element: 'wind', chakraColor: 0xff8a2a },
+  '2ssk': { element: 'lightning', chakraColor: 0x9cc4ff },
+  '2ssv': { element: 'dark', chakraColor: 0x8a5cff, ultElement: 'lightning' },
+  '2skr': { element: 'strength', chakraColor: 0xff8ac8 },
+  '2kks': { element: 'lightning', chakraColor: 0xd8f0ff },
+  '2fou': { element: 'wind', chakraColor: 0x7dd3ff, ultElement: 'lightning' },
+  '2jry': { element: 'wind', chakraColor: 0x8ad8ff, ultElement: 'fire' },
+  '2tnd': { element: 'strength', chakraColor: 0x8affb4 },
+  '2orc': { element: 'poison', chakraColor: 0x9a5cff },
+  '2gar': { element: 'sand', chakraColor: 0xd9c48a },
+  '2roc': { element: 'taijutsu', chakraColor: 0x9dff70 },
+  '2nej': { element: 'gentle', chakraColor: 0x9fd8ff },
+  '2hnt': { element: 'gentle', chakraColor: 0xa8b0ff },
+  '2guy': { element: 'taijutsu', chakraColor: 0xff6a3c, ultElement: 'fire' },
+  '2itc': { element: 'fire', chakraColor: 0xff4a2a, ultElement: 'dark' },
+  '2ksm': { element: 'water', chakraColor: 0x4cc8e8, ultElement: 'water' },
+  '2ddr': { element: 'explosion', chakraColor: 0xf2e6b0 },
+  '2hdn': { element: 'blade', chakraColor: 0xd02030 },
+  '2tob': { element: 'fire', chakraColor: 0xff8c1a },
+  '2pea': { element: 'push', chakraColor: 0xffc890 },
+  '2klb': { element: 'strength', chakraColor: 0xffd040, ultElement: 'blade' },
+  '2kbt': { element: 'scalpel', chakraColor: 0x7dffb0 },
+  '2sgt': { element: 'water', chakraColor: 0x6ad8ff },
+  '3mfn': { element: 'blade', chakraColor: 0xe8f4ff, ultElement: 'lightning' },
+  '9ind': { element: 'dark', chakraColor: 0x9a6aff },
+};
+for (const d of ROSTER) {
+  Object.assign(d, CHAKRA[d.code] ?? {});
+  if (d.awakenedDef) Object.assign(d.awakenedDef, CHAKRA[d.awakenedDef.code] ?? CHAKRA[d.code] ?? {});
+}
 
 export function findCharacter(code: string | null | undefined): CharacterDef | undefined {
   return ROSTER.find((d) => d.code === code);

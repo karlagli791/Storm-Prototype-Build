@@ -3,6 +3,7 @@
  * guard sphere, dash trail, Rasengan / Chidori jutsu emitters, clash burst, wall-splat dust.
  */
 import * as THREE from 'three';
+import { ElementFX } from './ElementFX';
 
 interface Particle {
   mesh: THREE.Mesh;
@@ -52,6 +53,8 @@ interface GroundFx { mesh: THREE.Mesh; life: number; maxLife: number; grow: numb
 
 export class Effects {
   readonly group = new THREE.Group();
+  /** Character-specific chakra effects (procedural shaders). */
+  readonly el: ElementFX = new ElementFX(this);
   private ground: GroundFx[] = [];
   private decals: GroundFx[] = [];
   private groundMatCache = new Map<string, THREE.MeshBasicMaterial>();
@@ -197,6 +200,7 @@ export class Effects {
 
   update(dt: number): void {
     this.updateGround(dt);
+    this.el.update(dt);
     for (let i = this.sprites.length - 1; i >= 0; i--) {
       const p = this.sprites[i];
       p.life -= dt;

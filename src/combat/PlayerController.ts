@@ -4,7 +4,7 @@
  * wall-splat transition, then drives the visual rig.
  */
 import * as THREE from 'three';
-import { CombatState, GRAVITY, KNOCKBACK_STATES } from '../core/Types';
+import { CombatState, GRAVITY, JUMP_GRAVITY_SCALE, KNOCKBACK_STATES } from '../core/Types';
 import { Fighter } from './Fighter';
 import { CameraBasis, CombatStateMachine } from './CombatStateMachine';
 import { ArenaEnvironment } from '../systems/ArenaEnvironment';
@@ -49,7 +49,7 @@ export class PlayerController {
 
     // 3. Integrate
     const flight = FLIGHT_STATES.has(f.state);
-    if (!flight) f.velocity.y += GRAVITY * dt;
+    if (!flight) f.velocity.y += GRAVITY * dt * (f.state === CombatState.JUMPING ? JUMP_GRAVITY_SCALE : 1);
     if (f.state === CombatState.DASH_STARTUP || f.state === CombatState.DASH_CHARGING) {
       // Hover in place vertically while winding up (keeps aerial dashes possible)
       if (f.position.y > f.groundY + 0.02) f.velocity.y = 0;
@@ -57,7 +57,7 @@ export class PlayerController {
     f.position.addScaledVector(f.velocity, dt);
 
     // Terrain following: the floor under the fighter is the stage mesh height, not y = 0.
-    const gy = this.arena.groundY(f.position.x, f.position.z);
+    const gy = this.arena.groundY(f.position.x, f.position.z, f.position.y);
     f.groundY = gy;
     if (f.position.y <= gy + 0.001) {
       f.position.y = gy;
@@ -92,7 +92,7 @@ export class PlayerController {
     f.rig.root.rotation.y = f.yaw;
     f.rig.update(
       {
-        state: f.state,
+        state: f.state === CombatState.INTRO && f.stateFrame < f.introDelay ? CombatState.IDLE_NEUTRAL : f.state,
         stateFrame: f.stateFrame,
         moveName: f.currentMove?.name ?? null,
         airDash: f.airDashed && !f.grounded,
@@ -108,8 +108,10 @@ export class PlayerController {
         moveDir: f.moveDirLocal,
         hitDir: f.lastHitDir,
         throwDir: f.throwDir,
+        jumpDir: f.state === CombatState.DODGE || (f.state === CombatState.JUMPING && f.jumpLaunch) ? f.jumpDirLocal : null,
         awInfix: f.def.awClipInfix ?? null,
-        falling: !f.grounded && f.velocity.y < -0.5,
+        // A launched jump keeps its take-off clip through the apex; only falls use the fall loop.
+        falling: f.state === CombatState.JUMPING ? !f.jumpLaunch : !f.grounded && f.velocity.y < -0.5,
         framesLeft: f.state === CombatState.KNOCKDOWN ? 34 - f.stateFrame : f.stunFrames,
       },
       dt,

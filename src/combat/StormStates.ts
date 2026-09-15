@@ -38,6 +38,7 @@ export interface ClipContext {
   airDash?: boolean;
   /** Side throw out of a ninja move: 'L' | 'R' picks the PRJ_DL / PRJ_DR clip. */
   throwDir?: HitDir | null;
+  jumpDir?: HitDir | null;
   awakened?: boolean;
   falling: boolean;
   stateFrame: number;
@@ -67,8 +68,9 @@ export function bindingFor(state: CombatState, ctx: ClipContext): StateBinding {
         clips: [O(dirClip('{c}', ctx.moveDir, { F: 'dsf0', B: 'dsb0', L: 'dsl0', R: 'dsr0' })), L('{c}jmp0')],
       };
     case CombatState.JUMPING:
-      if (ctx.airDash)
-        return { act: 'PL_ACT_NMOVE_SIDE', anm: 'PL_ANM_DSH_' + ctx.moveDir, clips: [O(dirClip('{c}', ctx.moveDir, { F: 'dsf0', B: 'dsb0', L: 'dsl0', R: 'dsr0' }), '{c}jmp1'), L('{c}jmp1')] };
+      // Directional jump: the game's directional hop clips (PL_ANM_DSH_FWD / BK / L / R), then the air loop.
+      if (ctx.jumpDir)
+        return { act: ctx.jumpDir === 'F' ? 'PL_ACT_JMP_F' : ctx.jumpDir === 'B' ? 'PL_ACT_JMP_B' : 'PL_ACT_JMP_SIDE', anm: 'PL_ANM_DSH_' + ctx.jumpDir, clips: [O(dirClip('{c}', ctx.jumpDir, { F: 'dsf0', B: 'dsb0', L: 'dsl0', R: 'dsr0' }), '{c}jmp1'), O('{c}jmp0', '{c}jmp1'), L('{c}jmp1')] };
       // jmp0 = take-off (one shot) → jmp1 = airborne loop. The common bank's fal0/fal1 are
       // *damage* falls (arms flailing) and are only used by LAUNCHED.
       return ctx.falling
@@ -76,12 +78,12 @@ export function bindingFor(state: CombatState, ctx: ClipContext): StateBinding {
         : { act: 'PL_ACT_JMP_V', anm: 'PL_ANM_JMP0', clips: [O('{c}jmp0', '{c}jmp1'), L('{c}jmp1')] };
     case CombatState.DASH_STARTUP:
     case CombatState.DASH_CHARGING:
-      return { act: 'PL_ACT_NINJA_DASH', anm: 'PL_ANM_CHADASH_BEGIN', clips: [O('{c}dsh0s', '{c}dsh1l'), L('{c}dsf0')] };
+      return { act: 'PL_ACT_NINJA_DASH', anm: 'PL_ANM_CHADASH_BEGIN', clips: [O('{c}dsh0s', '{c}dsh0l'), O('{c}_cdsh0s', '{c}_cdsh0l'), L('{c}dsh0l'), L('{c}_cdsh0l'), L('1cmndsh0l')] };
     case CombatState.DASH_HOMING:
     case CombatState.SPARK_DASH:
-      return { act: 'PL_ACT_CHAKRA_DASH', anm: 'PL_ANM_CHADASH_LOOP', clips: [L('{c}dsh1l'), L('1cmndsh0l'), L('{c}dsf0')] };
+      return { act: 'PL_ACT_CHAKRA_DASH', anm: 'PL_ANM_CHADASH_LOOP', clips: [L('{c}dsh0l'), L('{c}_cdsh0l'), L('1cmndsh0l'), L('{c}run1')] };
     case CombatState.DASH_IMPACT:
-      return { act: 'PL_ACT_CHAKRA_DASH_END_HIT', anm: 'PL_ANM_LAN', clips: [O('{c}dsh0l'), O('{c}lan0')] };
+      return { act: 'PL_ACT_CHAKRA_DASH_END_HIT', anm: 'PL_ANM_LAN', clips: [O('{c}lan0', '{c}nut0'), L('{c}nut0')] };
     case CombatState.DASH_REBOUND:
       return { act: 'PL_ACT_CHAKRA_DASH_END_GUARDED', anm: 'PL_ANM_DMG_STAGGER_BACK', clips: [O('1cmnkno0'), O('1cmnsta1'), O('{c}ghf0')] };
     case CombatState.DASH_CLASH:
@@ -148,6 +150,10 @@ export function bindingFor(state: CombatState, ctx: ClipContext): StateBinding {
       return { act: 'PL_ACT_SPSKILL_DEMO_ATK', anm: 'PL_ANM_SPSKILL_1', clips: ctx.moveClip ? [O(ctx.moveClip), O('{c}skl1_s1', '{c}skl1_l1'), O('{c}skl1_s')] : [O('{c}skl1_s')] };
     case CombatState.AWAKEN:
       return { act: 'PL_ACT_AWAKE_BEGIN', anm: 'PL_ANM_AWAKE_S', clips: [O('{c}sklchg_s', '{c}sklchg_l'), L('{c}hola0'), L('{c}nut0')] };
+    case CombatState.DODGE:
+      return { act: 'PL_ACT_GUARD_STEP', anm: 'PL_ANM_DSH_' + (ctx.jumpDir ?? 'B'), clips: [O(dirClip('{c}', ctx.jumpDir ?? 'B', { F: 'dsf0', B: 'dsb0', L: 'dsl0', R: 'dsr0' })), O('1cmnddg0'), L('{c}grd0')] };
+    case CombatState.WIN:
+      return { act: 'PL_ACT_WIN', anm: 'PL_ANM_WIN_S', clips: [O('{c}win10', '{c}win11'), L('{c}win11'), L('{c}nut0')] };
     case CombatState.DEAD:
       return { act: 'PL_ACT_DEAD_DUEL', anm: 'PL_ANM_LOSE_L', clips: [O('{c}dow1', '1cmndwn0'), O('{c}dow0', '1cmndwn0'), L('1cmndwn0')] };
   }

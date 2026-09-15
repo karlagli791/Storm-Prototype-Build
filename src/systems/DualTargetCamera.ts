@@ -47,7 +47,7 @@ export const CAMERA_PARAMS = {
   // Combo camera: while a string connects the view swings to the side (2D-fighter framing) and
   // pushes in slowly; it eases back out when the exchange ends.
   COMBO_DIST: 4.4,
-  COMBO_PUSH: 0.35,
+  COMBO_PUSH: 0.2,
   COMBO_MIN_DIST: 3.2,
   COMBO_UP: 1.25,
   COMBO_FOV: 44,
@@ -157,7 +157,8 @@ export class DualTargetCamera {
     this.cTarget.addScaledVector(this.uSep, P.DASH_BACK * this.dashWeight);
 
     // Combo camera blend
-    const rateIn = 5.0, rateOut = 2.2;
+    // Slow, eased swing into the side view and a slower return (Storm's combo camera).
+    const rateIn = 1.35, rateOut = 0.9;
     const wPrev = this.comboWeight;
     this.comboWeight += (this.comboTarget - this.comboWeight) * Math.min(1, (this.comboTarget > this.comboWeight ? rateIn : rateOut) * dt);
     if (this.comboTarget > 0.5) this.comboTime += dt; else this.comboTime = Math.max(0, this.comboTime - dt * 2);
@@ -171,7 +172,8 @@ export class DualTargetCamera {
       this.lookCombo.y = Math.max(p1.y, p2.y) * 0.5 + Math.min(p1.y, p2.y) * 0.5 + P.COMBO_UP * 0.8;
       this.cCombo.copy(this.lookCombo).addScaledVector(this.nLat, dist * this.comboSide / this.side);
       this.cCombo.y = this.lookCombo.y + P.COMBO_UP * 0.5;
-      const w = this.comboWeight * this.comboWeight * (3 - 2 * this.comboWeight);
+      const cw = this.comboWeight;
+      const w = cw * cw * cw * (cw * (cw * 6 - 15) + 10); // smootherstep
       this.cTarget.lerp(this.cCombo, w);
       this.pMid.lerp(this.lookCombo, w);
     }

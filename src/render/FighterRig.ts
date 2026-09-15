@@ -29,6 +29,8 @@ export interface PoseContext {
   moveDir: HitDir;
   hitDir: HitDir;
   throwDir?: HitDir | null;
+  /** Jump / roll direction relative to the target. */
+  jumpDir?: HitDir | null;
   /** Awakened clip infix in force ('awa' / 'aws') or null. */
   awInfix?: string | null;
   falling: boolean;
@@ -549,6 +551,7 @@ export class FighterRig {
       airborne: !ctx.grounded,
       airDash: ctx.airDash,
       throwDir: ctx.throwDir,
+      jumpDir: ctx.jumpDir,
       awakened: ctx.awakened,
       falling: ctx.falling,
       stateFrame: ctx.stateFrame,
@@ -579,7 +582,7 @@ export class FighterRig {
 
   private updateGlbAnimation(ctx: PoseContext, dt: number): void {
     // Re-pick on state change, on hit direction / fall changes, or when a one-shot finished and has a chain.
-    const stateKey = `${ctx.state}|${ctx.moveClip ?? ''}|${ctx.jumpCount ?? 0}|${ctx.airDash ? 1 : 0}|${ctx.hitDir}|${ctx.falling ? 1 : 0}|${ctx.throwDir ?? ''}|${ctx.awInfix ?? ''}`;
+    const stateKey = `${ctx.state}|${ctx.moveClip ?? ''}|${ctx.jumpCount ?? 0}|${ctx.airDash ? 1 : 0}|${ctx.hitDir}|${ctx.falling ? 1 : 0}|${ctx.throwDir ?? ''}|${ctx.awInfix ?? ''}|${ctx.jumpDir ?? ''}`;
     this.awInfix = ctx.awInfix ?? '';
     const spec = this.pickSpec(ctx);
     if (spec) {

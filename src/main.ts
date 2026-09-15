@@ -77,6 +77,7 @@ export const STAGES: StageOption[] = [
 
 const ROUND_SECONDS = 99;
 const ZERO3 = new THREE.Vector3();
+const WATCH_STATES: ReadonlySet<CombatState> = new Set([CombatState.HITSTUN, CombatState.LAUNCHED, CombatState.TUMBLE, CombatState.CRUMPLE, CombatState.KNOCKDOWN, CombatState.WALL_SPLAT, CombatState.BLOCKSTUN, CombatState.GUARD_BREAK, CombatState.SUBSTITUTED, CombatState.DODGE, CombatState.DASH_IMPACT, CombatState.THROW]);
 
 class Game implements EventSink {
   renderer: THREE.WebGLRenderer;
@@ -128,6 +129,13 @@ class Game implements EventSink {
   private koAngle = 0;
   private koLoser: Fighter | null = null;
   private koM = new THREE.Matrix4();
+  private comboHold = 0;
+  /** Round outro: victory pose + camera before the results screen. */
+  private outroStarted = false;
+  private outroTimer = 0;
+  private outroFighter: Fighter | null = null;
+  private outroAngle = 0;
+  private introFx = 0;
   lastTime = performance.now();
   roundTime = ROUND_SECONDS;
   paused = false;
@@ -339,6 +347,11 @@ class Game implements EventSink {
     place(this.team2.active, 6, 0);
     for (const t of [this.team1, this.team2]) for (const sp of t.supports) sp.rig.root.visible = false;
     this.resultsShown = false;
+    this.outroStarted = false;
+    this.outroTimer = 0;
+    this.outroFighter = null;
+    this.koTimer = 0;
+    this.introFx = 0;
     this.maxCombo = [0, 0];
     this.dmgDealt = [0, 0];
     this.relinkTargets();
@@ -347,6 +360,8 @@ class Game implements EventSink {
     // Round intro: both leaders play their entry clip (PL_ACT_BTL_BEFORE_LEADER) before "Go!".
     this.team1.active.enterState(CombatState.INTRO);
     this.team2.active.enterState(CombatState.INTRO);
+    this.team1.active.introDelay = 0;
+    this.team2.active.introDelay = 70; // 2P's entry starts when the camera reaches them
     for (const f of this.allFighters) { f.awakened = false; f.awakenTimer = 0; f.rig.setAwakened(false); }
     this.prevStates.clear();
     this.projectiles.clear();
@@ -559,6 +574,66 @@ class Game implements EventSink {
     else goToTitle();
   }
 
+  /** Round intro: the camera visits 1P's entry pose, then 2P's (whose entry starts on arrival). */
+  private applyIntroCamera(): boolean {
+    const a = this.team1.active, b = this.team2.active;
+    const fa = a.state === CombatState.INTRO ? a.stateFrame : -1;
+    const fb = b.state === CombatState.INTRO ? b.stateFrame : -1;
+    const fr = Math.max(fa, fb);
+    if (fr < 0 || fr > 140 || this.mode === 'demo' && fr > 139) return false;
+    const second = fr >= 70;
+    const who = second ? b : a;
+    const k = (second ? fr - 70 : fr) / 70;
+    const c = who.rig.root.position;
+    const side = second ? -1 : 1;
+    const ang = who.yaw + side * (0.62 - 0.32 * k);
+    const dist = 4.3 - 1.4 * k;
+    this.camP.set(c.x + Math.sin(ang) * dist, c.y + 1.25 + 0.3 * (1 - k), c.z + Math.cos(ang) * dist);
+    this.koM.lookAt(this.camP, new THREE.Vector3(c.x, c.y + 1.05, c.z), new THREE.Vector3(0, 1, 0));
+    this.camQ.setFromRotationMatrix(this.koM);
+    this.camera.override(this.camP, this.camQ, 38 - 5 * k);
+    this.setLetterbox(true);
+    const bit = second ? 2 : 1;
+    if (!(this.introFx & bit)) {
+      this.introFx |= bit;
+      this.effects.el.aura(who.def.element ?? 'wind', c.clone().setY(who.groundY), who.def.chakraColor ?? (who.def.color as number), 1.4);
+    }
+    return true;
+  }
+
+  /** Victory: the winner plays their win pose while the camera circles in from the front. */
+  private startOutro(): void {
+    this.outroStarted = true;
+    this.outroTimer = this.mode === 'demo' ? 2.6 : 3.6;
+    const winTeam = this.team2.stats.isDead ? this.team1 : this.team1.stats.isDead ? this.team2 : this.team1.stats.health >= this.team2.stats.health ? this.team1 : this.team2;
+    const w = winTeam.active;
+    this.outroFighter = w;
+    this.outroAngle = 0;
+    if (w.state !== CombatState.DEAD) {
+      w.enterState(CombatState.WIN);
+      w.velocity.x = 0;
+      w.velocity.z = 0;
+    }
+    this.effects.el.aura(w.def.element ?? 'wind', w.position.clone().setY(w.groundY), w.def.chakraColor ?? (w.def.color as number), 1.6);
+    this.audio.voice(w.def.voiceCode ?? w.def.code, 'powerUP', { volume: 0.8 * SETTINGS.voice });
+  }
+
+  private applyWinCamera(dt: number): boolean {
+    const w = this.outroFighter;
+    if (!this.outroStarted || !w || this.resultsShown) return false;
+    this.outroAngle += dt * 0.2;
+    const k = Math.min(1, Math.max(0, 1 - this.outroTimer / 3.6));
+    const c = w.rig.root.position;
+    const yaw = w.yaw + 0.45 - this.outroAngle;
+    const dist = 4.8 - 1.8 * k;
+    this.camP.set(c.x + Math.sin(yaw) * dist, c.y + 1.55 - 0.35 * k, c.z + Math.cos(yaw) * dist);
+    this.koM.lookAt(this.camP, new THREE.Vector3(c.x, c.y + 1.1, c.z), new THREE.Vector3(0, 1, 0));
+    this.camQ.setFromRotationMatrix(this.koM);
+    this.camera.override(this.camP, this.camQ, 40 - 6 * k);
+    this.setLetterbox(true);
+    return true;
+  }
+
   private setLetterbox(on: boolean): void {
     const hud = document.getElementById('hud');
     if (on && !this.letterbox) {
@@ -612,7 +687,6 @@ class Game implements EventSink {
     switch (f.state) {
       case CombatState.DASH_STARTUP: this.effects.gust(p, 3.2, col); this.effects.dustKick(p, 8); break;
       case CombatState.DASH_HOMING: case CombatState.SPARK_DASH: this.effects.groundRing(p, 2.8, 0xffffff, 0.3); break;
-      case CombatState.JUMPING: if (prev !== CombatState.COMBO_STRING && prev !== CombatState.JUTSU && prev !== CombatState.JUMPING && f.grounded !== false) this.effects.dustKick(p, 5, 0.5); break;
       case CombatState.NINJA_MOVE: this.effects.dustKick(p, 6, 0.6); this.effects.gust(p, 2.2); break;
       case CombatState.HOLLOW_STEP: this.effects.gust(p, 2.0); break;
       case CombatState.IDLE_NEUTRAL: case CombatState.RUNNING:
@@ -621,10 +695,11 @@ class Game implements EventSink {
       case CombatState.KNOCKDOWN: this.effects.groundCrack(p, 1.9); this.postfx.shockwave(p, this.camera.camera, 0.5, 0.35); break;
       case CombatState.CRUMPLE: this.effects.dustKick(p, 6, 0.7); break;
       case CombatState.DEAD: this.effects.groundCrack(p, 2.6); this.postfx.impactFrame(1, 0xffe9c0); this.postfx.shockwave(p, this.camera.camera, 1.3, 0.6); break;
-      case CombatState.ULTIMATE: this.effects.gust(p, 4.5, col); this.effects.dustKick(p, 12, 1.0, 1.3); break;
-      case CombatState.AWAKEN: this.effects.gust(p, 5, col); this.effects.groundCrack(p, 3.0, true); this.postfx.shockwave(p, this.camera.camera, 1.0, 0.6); break;
+      case CombatState.ULTIMATE: this.effects.el.aura(f.def.ultElement ?? f.def.element ?? 'wind', p, f.def.chakraColor ?? col, 1.6); this.effects.gust(p, 4.5, col); this.effects.dustKick(p, 12, 1.0, 1.3); break;
+      case CombatState.AWAKEN: this.effects.el.aura(f.def.element ?? 'wind', p, f.def.chakraColor ?? col, 2.0); this.effects.gust(p, 5, col); this.effects.groundCrack(p, 3.0, true); this.postfx.shockwave(p, this.camera.camera, 1.0, 0.6); break;
       case CombatState.CHAKRA_CHARGE: this.effects.groundRing(p, 1.6, col, 0.5); break;
-      case CombatState.JUTSU: this.effects.gust(p, 3.0, col); break;
+      case CombatState.JUTSU: this.effects.el.aura(f.def.element ?? 'wind', p, f.def.chakraColor ?? col, 1.0); break;
+      case CombatState.DODGE: this.effects.gust(p, 1.8); break;
     }
   }
 
@@ -648,6 +723,16 @@ class Game implements EventSink {
     // Fighters present in the arena this tick
     const present = [...this.team1.present, ...this.team2.present];
     for (const f of present) this.controllers.get(f)!.tick(this.tick, dt, this.camBasis);
+    // Watchdog: no fighter stays frozen in hitstop or locked in a reaction for long.
+    for (const f of present) {
+      f.frozenTicks = f.hitstopFrames > 0 ? f.frozenTicks + 1 : 0;
+      if (f.frozenTicks > 720) { f.hitstopFrames = 0; f.heldBy = 0; f.frozenTicks = 0; this.log(`${f.def.code}: watchdog released hitstop`); }
+      if (WATCH_STATES.has(f.state) && f.stateFrame > 480 && !f.heldBy) {
+        f.tetherFrames = 0; f.tetherBy = 0;
+        f.enterState(f.grounded ? CombatState.IDLE_NEUTRAL : CombatState.LAUNCHED);
+        this.log(`${f.def.code}: watchdog released ${f.state}`);
+      }
+    }
 
     // Leader switch requests
     for (const team of [this.team1, this.team2]) {
@@ -747,7 +832,8 @@ class Game implements EventSink {
         t.stats.health = Math.min(t.stats.healthMax, t.stats.health + 400 * dt);
       }
     }
-    if (this.winner && this.koTimer <= 0 && !this.resultsShown) void this.showResults();
+    if (this.winner && this.koTimer <= 0 && !this.outroStarted) this.startOutro();
+    if (this.outroStarted && !this.resultsShown) { this.outroTimer -= dt; if (this.outroTimer <= 0) void this.showResults(); }
     for (let i = 0; i < 2; i++) this.maxCombo[i] = Math.max(this.maxCombo[i], (i === 0 ? this.team2 : this.team1).stats.comboHits);
 
     // KO: the last blow plays out in slow motion while the camera circles the loser.
@@ -781,20 +867,21 @@ class Game implements EventSink {
     const hitStates = new Set([CombatState.HITSTUN, CombatState.LAUNCHED, CombatState.TUMBLE, CombatState.CRUMPLE, CombatState.BLOCKSTUN]);
     const a1 = this.team1.active, a2 = this.team2.active;
     const stringOn = (a: Fighter, v: Fighter) => (a.state === CombatState.COMBO_STRING || a.state === CombatState.JUTSU) && (hitStates.has(v.state) || v.tetherFrames > 0);
-    this.camera.comboTarget = stringOn(a1, a2) || stringOn(a2, a1) ? 1 : 0;
+    this.comboHold = stringOn(a1, a2) || stringOn(a2, a1) ? 0.7 : Math.max(0, this.comboHold - dt);
+    this.camera.comboTarget = this.comboHold > 0 ? 1 : 0;
     // Shadow window follows the fighters
     const mid = this.team1.active.rig.root.position.clone().lerp(this.team2.active.rig.root.position, 0.5);
     this.sun.target.position.copy(mid);
     this.sun.position.copy(mid).add(new THREE.Vector3(20, 40, 15));
     this.effects.update(dt);
     this.camera.dashTarget = a1.state === CombatState.DASH_HOMING || a1.state === CombatState.DASH_STARTUP || a1.state === CombatState.SPARK_DASH ? 1 : 0;
-    if (!this.applyKoCamera(dt) && !this.applyCinematicCamera()) this.camera.update(this.team1.active.rig.root.position, this.team2.active.rig.root.position, dt);
+    if (!this.applyIntroCamera() && !this.applyKoCamera(dt) && !this.applyWinCamera(dt) && !this.applyCinematicCamera()) this.camera.update(this.team1.active.rig.root.position, this.team2.active.rig.root.position, dt);
     if (background) return;
     // Smear frames on fast travel, radial blur while P1 dashes, chakra heat around jutsu.
     for (const f of [...this.team1.present, ...this.team2.present]) {
       const sp = Math.hypot(f.velocity.x, f.velocity.z);
-      const streak = (f.state === CombatState.DASH_HOMING || f.state === CombatState.SPARK_DASH || f.state === CombatState.NINJA_MOVE || f.state === CombatState.LAUNCHED || f.state === CombatState.TUMBLE || (f.state === CombatState.ULTIMATE && f.ultimatePhase === 1)) && sp > 9 && SETTINGS.postFx;
-      if (streak) { this.smearTmp.set(f.velocity.x, f.velocity.y * 0.3, f.velocity.z).multiplyScalar(0.035); if (this.smearTmp.length() > 0.9) this.smearTmp.setLength(0.9); f.rig.setSmear(this.smearTmp); }
+      const streak = SETTINGS.postFx && sp > 9 && (f.state === CombatState.COMBO_STRING || f.state === CombatState.JUTSU || f.state === CombatState.SPARK_DASH || f.state === CombatState.DASH_HOMING || f.state === CombatState.TUMBLE || (f.state === CombatState.ULTIMATE && f.ultimatePhase === 1));
+      if (streak) { this.smearTmp.set(f.velocity.x, f.velocity.y * 0.3, f.velocity.z).multiplyScalar(0.022); if (this.smearTmp.length() > 0.55) this.smearTmp.setLength(0.55); f.rig.setSmear(this.smearTmp); }
       else f.rig.setSmear(ZERO3);
     }
     const p1Dash = a1.state === CombatState.DASH_HOMING || a1.state === CombatState.SPARK_DASH || (a1.state === CombatState.ULTIMATE && a1.ultimatePhase === 1);
@@ -895,6 +982,7 @@ async function boot(): Promise<void> {
     bgm.playLoop('title', musicVol(musicBase), 2.7);
     // Attract mode: a random COM vs COM match runs blurred behind the menus.
     const demo = new Game(randomSelection('demo'));
+    demo.audio.muted = true; // the attract match behind the menus is visual only
     window.storm = demo;
     const gl = document.getElementById('gl') as HTMLElement;
     gl.style.transition = 'filter .8s';
