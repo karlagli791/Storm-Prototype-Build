@@ -11,3 +11,14 @@ computing gzip size...
 - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
 [32m✓ built in 1.96s[39m
+  • electron-builder  version=25.1.8 os=10.0.26200
+  • loaded configuration  file=package.json ("build" field)
+  • author is missed in the package.json  appPackageFile=C:\Users\ysoyo\OneDrive\Desktop\wan\storm4-proto\package.json
+  • executing @electron/rebuild  electronVersion=33.4.11 arch=x64 buildFromSource=false appDir=./
+  • installing native dependencies  arch=x64
+  • completed installing native dependencies
+  • packaging       platform=win32 arch=x64 electron=33.4.11 appOutDir=release\win-unpacked
+  • updating asar integrity executable resource  executablePath=release\win-unpacked\STORM Prototype Build.exe
+  • building        target=portable file=release\StormPrototypeBuild-0.4.0-x64.exe archs=x64
+  • signing with signtool.exe  path=release\StormPrototypeBuild-0.4.0-x64.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
