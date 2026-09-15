@@ -246,3 +246,4 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 - 2026-09-15 06:02 — Version 0.5.0: combo tether, ninja-move hop, side throws, cameras, voices, BGM, jutsu demos
 - 2026-09-15 08:26 — Version 0.6.0 (part 1): full game package — menus, team of three, 24 fighters, 21 stages, post FX
 - 2026-09-15 08:31 — Ultimate rush closes in with a wider contact box; COM difficulty scales the AI; 2P keyboard docs
+- 2026-09-15 08:52 — Version 0.6.0 (part 2): final character and stage exports, common bank with victim demo clips, frame data
