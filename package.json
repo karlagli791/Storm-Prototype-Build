@@ -48,7 +48,10 @@
         "portable",
         "nsis"
       ],
-      "artifactName": "StormPrototypeBuild-${version}-${arch}.${ext}"
+      "artifactName": "StormPrototypeBuild-${version}-${arch}.${ext}",
+      "signAndEditExecutable": false,
+      "verifyUpdateCodeSignature": false,
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": true,

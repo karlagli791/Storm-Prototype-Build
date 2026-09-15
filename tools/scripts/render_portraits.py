@@ -42,10 +42,10 @@ for pb in arm.pose.bones:
 if arm.animation_data:
     arm.animation_data_clear()
 # idle stance if a clip exists (nut0 / win pose)
-act = next((a for a in bpy.data.actions if a.name.endswith('nut0')), None) or next((a for a in bpy.data.actions if 'win' in a.name), None)
+act = None if pose_files else (next((a for a in bpy.data.actions if a.name.endswith('nut0')), None) or next((a for a in bpy.data.actions if 'win' in a.name), None))
 if act:
     arm.animation_data_create(); arm.animation_data.action = act
-    slot = next((sl for sl in act.slots if sl.name_display == arm.name), None) or (act.slots[0] if len(act.slots) else None)
+    slot = next((sl for sl in act.slots if sl.name_display == arm.name), None) or next((sl for sl in act.slots if getattr(sl, 'target_id_type', '') == 'OBJECT'), None)
     if slot: arm.animation_data.action_slot = slot
     print('POSE', act.name, 'slot', slot.name_display if slot else None)
     bpy.context.scene.frame_set(8)
@@ -82,10 +82,10 @@ def build_toon():
 toon = build_toon()
 for mat in bpy.data.materials:
     if not mat.node_tree: continue
-    img = None
-    for n in mat.node_tree.nodes:
-        if n.type == 'TEX_IMAGE' and n.image and 'celshade' not in n.image.name.lower() and 'error' not in n.image.name.lower():
-            img = n.image; break
+    # Base colour = the container's Tex1 (first texture slot); Tex2+ are masks / detail layers.
+    cands = [n for n in mat.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image and 'celshade' not in n.image.name.lower() and 'error' not in n.image.name.lower()]
+    cands.sort(key=lambda n: (0 if n.name.startswith('Tex1') or n.image.name.endswith('_0') else 1, n.name))
+    img = cands[0].image if cands else None
     nt = mat.node_tree; nt.nodes.clear()
     out = nt.nodes.new('ShaderNodeOutputMaterial'); grp = nt.nodes.new('ShaderNodeGroup'); grp.node_tree = toon
     nt.links.new(grp.outputs['Shader'], out.inputs['Surface'])

@@ -49,8 +49,8 @@ const CSS = `
 #csel .stages { position:absolute; left:50%; top:22%; transform:translateX(-50%); display:flex; gap:2vh; }
 #csel .stage { width:26vh; height:15vh; border-radius:1.4vh; background:#123; box-shadow:inset 0 0 0 .3vh rgba(255,255,255,.35); display:flex; align-items:flex-end; justify-content:center; padding:1vh; box-sizing:border-box; font-size:1.7vh; letter-spacing:.15em; text-align:center; text-shadow:0 2px 4px #000; background-size:cover; background-position:center; }
 #csel .stage.sel { transform:scale(1.08); box-shadow:0 0 0 .5vh #fff, 0 0 2.4vh .6vh rgba(255,240,180,.9); }
-#csel .team { position:absolute; bottom:3vh; display:flex; gap:1.2vh; align-items:center; }
-#csel .team.p1 { left:3vw; } #csel .team.p2 { right:3vw; flex-direction:row-reverse; }
+#csel .team { position:absolute; top:64%; display:flex; gap:1.2vh; align-items:center; }
+#csel .team.p1 { left:calc(50% - 33vh); } #csel .team.p2 { right:calc(50% - 33vh); flex-direction:row-reverse; }
 #csel .team .slot { width:8vh; height:8vh; border-radius:1vh; background:rgba(0,20,40,.45); box-shadow:inset 0 0 0 .3vh rgba(255,255,255,.35); overflow:hidden; position:relative; }
 #csel .team .slot img { width:100%; height:100%; }
 #csel .team .slot span { position:absolute; left:0; right:0; bottom:0; font-size:1.2vh; text-align:center; background:rgba(0,0,0,.55); letter-spacing:.1em; }
@@ -59,6 +59,44 @@ const CSS = `
 #csel .go.show { animation:goflash .9s ease-out forwards; }
 @keyframes goflash { 0%{opacity:0; transform:translate(-50%,-50%) scale(1.6);} 25%{opacity:1; transform:translate(-50%,-50%) scale(1);} 100%{opacity:1;} }
 `;
+
+/**
+ * Storm-style VS splash shown while the battle assets load: both leaders' versus art, names and
+ * supports, red vs blue brush plates. Returns a function that fades it out.
+ */
+export function showVsSplash(sel: Selection): () => void {
+  const el = document.createElement('div');
+  el.id = 'vsplash';
+  el.innerHTML = `
+    <style>
+      #vsplash { position:absolute; inset:0; z-index:19; overflow:hidden; font-family:'Segoe UI', system-ui, sans-serif; color:#fff; user-select:none;
+        background:linear-gradient(100deg, #b8321f 0 50%, #1f4fb8 50% 100%); transition:opacity .35s; }
+      #vsplash::before { content:''; position:absolute; inset:0; background:url(assets/ui/sel/bg.png) center/cover; opacity:.18; mix-blend-mode:screen; }
+      #vsplash .side { position:absolute; top:0; bottom:0; width:50%; }
+      #vsplash .side img.face { position:absolute; bottom:0; height:92vh; filter:drop-shadow(0 14px 22px rgba(0,0,0,.45)); animation:slide .45s cubic-bezier(.2,.9,.3,1) both; }
+      #vsplash .p1 { left:0; } #vsplash .p1 img.face { left:4vw; }
+      #vsplash .p2 { right:0; } #vsplash .p2 img.face { right:4vw; transform:scaleX(-1); animation-name:slide2; }
+      #vsplash .name { position:absolute; top:9vh; font-size:4.2vh; font-weight:900; letter-spacing:.14em; text-shadow:0 3px 8px rgba(0,0,0,.7); }
+      #vsplash .p1 .name { left:5vw; } #vsplash .p2 .name { right:5vw; text-align:right; }
+      #vsplash .sub { display:block; font-size:1.8vh; font-weight:500; letter-spacing:.2em; opacity:.9; }
+      #vsplash .sup { position:absolute; bottom:5vh; display:flex; align-items:center; gap:1vh; font-size:1.8vh; letter-spacing:.15em; }
+      #vsplash .p1 .sup { left:5vw; } #vsplash .p2 .sup { right:5vw; flex-direction:row-reverse; }
+      #vsplash .sup img { width:8vh; height:8vh; border-radius:1vh; box-shadow:0 0 0 .3vh rgba(255,255,255,.6); }
+      #vsplash .vs { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) rotate(-8deg); font-size:16vh; font-weight:900; font-style:italic; letter-spacing:.05em; color:#fff; text-shadow:0 0 30px #000, 0 6px 0 #6b0f0f, 0 0 60px rgba(255,200,80,.8); animation:pop .5s .25s cubic-bezier(.2,1.4,.4,1) both; }
+      #vsplash .stage { position:absolute; left:50%; bottom:3vh; transform:translateX(-50%); font-size:2vh; letter-spacing:.3em; text-shadow:0 2px 4px #000; }
+      @keyframes slide { from { transform:translateX(-40vw); opacity:0; } to { transform:none; opacity:1; } }
+      @keyframes slide2 { from { transform:translateX(40vw) scaleX(-1); opacity:0; } to { transform:scaleX(-1); opacity:1; } }
+      @keyframes pop { from { transform:translate(-50%,-50%) rotate(-8deg) scale(3); opacity:0; } to { transform:translate(-50%,-50%) rotate(-8deg) scale(1); opacity:1; } }
+    </style>
+    <div class="side p1"><img class="face" src="${sel.p1.leader.vsFace ?? sel.p1.leader.stand ?? ''}" alt=""><div class="name">${sel.p1.leader.displayName}<span class="sub">${sel.p1.leader.title ?? ''}</span></div>
+      <div class="sup"><img src="${sel.p1.support.icon ?? ''}" alt=""><span>SUPPORT · ${sel.p1.support.displayName}</span></div></div>
+    <div class="side p2"><img class="face" src="${sel.p2.leader.vsFace ?? sel.p2.leader.stand ?? ''}" alt=""><div class="name">${sel.p2.leader.displayName}<span class="sub">${sel.p2.leader.title ?? ''}</span></div>
+      <div class="sup"><img src="${sel.p2.support.icon ?? ''}" alt=""><span>SUPPORT · ${sel.p2.support.displayName}</span></div></div>
+    <div class="vs">VS</div>
+    <div class="stage">${sel.stage.name}</div>`;
+  document.body.appendChild(el);
+  return () => { el.style.opacity = '0'; setTimeout(() => el.remove(), 400); };
+}
 
 export class CharacterSelect {
   private el!: HTMLDivElement;

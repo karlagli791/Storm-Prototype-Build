@@ -13,3 +13,4 @@ tools/*.pdf
 *.blend1
 release/
 tools/renders/*.png
+build/

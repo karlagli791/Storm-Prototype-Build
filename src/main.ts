@@ -9,7 +9,7 @@ import { InputManager, KeyboardInputSource, P1_BINDINGS, ScriptedInputSource } f
 import { PAD } from './core/GamepadState';
 import { NARUTO_DEF, SASUKE_DEF } from './combat/CharacterDefs';
 import { ROSTER, findCharacter } from './combat/Roster';
-import { CharacterSelect, Selection } from './ui/CharacterSelect';
+import { CharacterSelect, Selection, showVsSplash } from './ui/CharacterSelect';
 import { CharacterDef } from './core/Types';
 import { Fighter, Team, EventSink } from './combat/Fighter';
 import { CombatStateMachine } from './combat/CombatStateMachine';
@@ -501,7 +501,11 @@ async function boot(): Promise<void> {
     q.set('stage', sel.stage.id);
     history.replaceState(null, '', `${location.pathname}?${q.toString()}`);
   }
+  // Storm-style VS splash covers the asset load; the round is held until it fades.
+  const hideSplash = showVsSplash(sel);
   window.storm = new Game(sel);
+  window.storm.paused = true;
+  setTimeout(() => { hideSplash(); window.storm.paused = false; }, 2800);
 }
 void NARUTO_DEF; void SASUKE_DEF; void (null as unknown as CharacterDef);
 boot();

@@ -1,14 +1,29 @@
+Unable to find a suitable DXT compression, falling back to uncompressed (3mfnbody_0, 512x512).
 Blender 4.5.4 LTS (hash b3efe983cc58 built 2025-10-28 14:22:47)
-Error: This slot (SCXFBIN_Scene) is not suitable for this data-block type (OB)
-Traceback (most recent call last):
-  File "C:\Users\ysoyo\OneDrive\Desktop\wan\storm4-proto\tools\scripts\render_portraits.py", line 49, in <module>
-    if slot: arm.animation_data.action_slot = slot
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-RuntimeError: Error: This slot (SCXFBIN_Scene) is not suitable for this data-block type (OB)
+Fra:8 Mem:212.87M (Peak 215.55M) | Time:00:00.76 | Rendering 1 / 64 samples
+Fra:8 Mem:212.87M (Peak 215.55M) | Time:00:00.80 | Rendering 25 / 64 samples
+Fra:8 Mem:212.87M (Peak 215.55M) | Time:00:00.83 | Rendering 50 / 64 samples
+Fra:8 Mem:212.87M (Peak 215.55M) | Time:00:00.85 | Rendering 64 / 64 samples
+Fra:8 Mem:183.43M (Peak 256.75M) | Time:00:00.89 | Compositing
+Saved: 'C:\Users\ysoyo\OneDrive\Desktop\wan\storm4-proto\tools\renders\stand_3mfn.png'
+Time: 00:00.96 (Saving: 00:00.04)
+
+Fra:8 Mem:182.68M (Peak 185.57M) | Time:00:00.08 | Rendering 1 / 64 samples
+Fra:8 Mem:182.68M (Peak 185.57M) | Time:00:00.12 | Rendering 25 / 64 samples
+Fra:8 Mem:182.68M (Peak 185.57M) | Time:00:00.16 | Rendering 50 / 64 samples
+Fra:8 Mem:182.68M (Peak 185.57M) | Time:00:00.18 | Rendering 64 / 64 samples
+Fra:8 Mem:151.56M (Peak 194.69M) | Time:00:00.20 | Compositing
+Saved: 'C:\Users\ysoyo\OneDrive\Desktop\wan\storm4-proto\tools\renders\face_3mfn.png'
+Time: 00:00.23 (Saving: 00:00.01)
 
 Info: XFBIN import finished in 0.49s
-Info: XFBIN import finished in 4.04s
-Info: XFBIN import finished in 5.86s
+Info: XFBIN import finished in 4.65s
+Info: XFBIN import finished in 7.62s
+POSE 3mfnnut0 slot 3mfnbod1
+BOUNDS <Vector (-0.6421, -0.2011, -0.0033)> <Vector (0.6421, 0.2742, 1.7009)> height 1.7042226777411997
+RENDERED stand_3mfn.png
+RENDERED face_3mfn.png
+DONE
 
 Blender quit
 Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB

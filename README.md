@@ -136,6 +136,30 @@ Builds the "CC2 Toon" node group (diffuse → Shader to RGB → `celshade_ramp.p
 fresnel rim, stepped specular) and a Solidify inverted-hull outline, renders with EEVEE and saves
 the .blend for hand tuning.
 
+## Character select, roster and desktop build
+
+The game opens on a Storm 2 style character select (icons, full-body art, versus faces and plates are
+the real Storm 2 UI textures; Mifune's and Indra's are captured from the engine). Pick 1P leader and
+support, the COM pair, then a stage. The match is encoded in the URL, so a reload rematches and ESC
+goes back to the select.
+
+Roster (`src/combat/Roster.ts`): Naruto, Sasuke, Kakashi, Minato, Gaara, Itachi, Deidara, Mifune,
+Indra. Assists: press L1 / R1 (Y on keyboard) at 50% support gauge and the support runs in, fires its
+jutsu and leaves; Balance / Guard / Attack types also intervene automatically.
+
+Desktop app (Electron):
+
+```bash
+npm run desktop
+```
+
+```bash
+npm run dist:win
+```
+
+The second command writes a portable `.exe` and an NSIS installer to `release/`; installed builds
+check the GitHub releases of this repository for updates.
+
 ## Deviations from the blueprint
 
 - Resources are **shared per team** so a leader switch keeps one coherent pool.
