@@ -203,3 +203,4 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 - 2026-09-15 03:06 — Roster of 9 (Deidara, Mifune, Itachi, Gaara, Kakashi, Minato, Indra), Storm 2 character select, jutsu assists, render interpolation, ramp orientation fix, Electron shell
 - 2026-09-15 03:13 — Select-screen polish, engine-captured portraits for Mifune and Indra, VS splash, portable Windows build, docs for session 5
 - 2026-09-15 03:22 — Desktop packaging: 256 px app icon, ignore build/ and release/
+- 2026-09-15 04:11 — Storm mechanics pass: double jump, air ninja move, air strings, ultimate jutsu with cut-in and spl1 clips, awakening, round intro, terrain following, behind-the-shoulder camera, Storm 2 SFX, sprite VFX, six more stages, animation and input fixes
