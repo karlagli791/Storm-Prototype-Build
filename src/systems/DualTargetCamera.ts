@@ -70,6 +70,8 @@ export class DualTargetCamera {
 
   /** Playable radius of the current stage (set by the game after a stage loads). */
   arenaRadius = ARENA_RADIUS;
+  /** Stage outline (distance from the centre per angle); keeps the camera out of walls and cliffs. */
+  limitFn: ((angle: number) => number) | null = null;
   /** 1 while P1 is chakra-dashing (set by the game). */
   dashTarget = 0;
   /** Player option: scales the follow distance (0.7 close … 1.4 far). */
@@ -180,7 +182,9 @@ export class DualTargetCamera {
 
     // Keep the camera inside the arena ceiling/walls with a soft margin so it never clips the cylinder.
     const rxz = Math.hypot(this.cTarget.x, this.cTarget.z);
-    const maxR = this.arenaRadius + 6.0;
+    // Stay just inside the stage outline: fighters stop at walls now, so a camera behind them must not
+    // swing into the cliff / wall geometry past the edge.
+    const maxR = this.limitFn ? this.limitFn(Math.atan2(this.cTarget.z, this.cTarget.x)) + 0.8 : this.arenaRadius + 6.0;
     if (rxz > maxR) {
       this.cTarget.x *= maxR / rxz;
       this.cTarget.z *= maxR / rxz;

@@ -386,6 +386,7 @@ class Game implements EventSink {
     this.hud.showToast(st.name, '#ffffff', 1.4);
     this.stageLoading = false;
     this.camera.arenaRadius = this.arena.radius;
+    this.camera.limitFn = (a) => this.arena.limitAt(a);
     this.applyLighting(st.light ?? 'day');
   }
 
