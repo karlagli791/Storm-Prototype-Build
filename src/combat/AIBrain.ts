@@ -22,10 +22,13 @@ export class AIBrain {
   private subWants = false;
   private tmp = new THREE.Vector3();
   private rng: () => number;
+  /** Difficulty: scales every reaction roll (0.55 easy … 2.4 ultimate). */
+  skill = 1;
   enabled = true;
 
   constructor(public readonly source: ScriptedInputSource, private team: Team, seed = 7) {
-    this.rng = mulberry32(seed);
+    const base = mulberry32(seed);
+    this.rng = () => base() / this.skill;
   }
 
   private tap(flag: InputFlag): void {

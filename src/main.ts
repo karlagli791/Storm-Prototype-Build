@@ -252,6 +252,7 @@ class Game implements EventSink {
     this.ai = new AIBrain(aiSrc, this.team2);
     this.ai.enabled = mode === 'cpu' || mode === 'demo' || new URLSearchParams(location.search).get('ai') === '1';
     if (mode === 'demo') { this.ai1 = new AIBrain(p1Src as ScriptedInputSource, this.team1, 3); this.ai1.enabled = true; }
+    this.applySettings();
 
     this.allFighters = [p1Lead, ...p1Sups, p2Lead, ...p2Sups];
     for (const f of this.allFighters) {
@@ -297,6 +298,9 @@ class Game implements EventSink {
   /** Re-read the player options (volume, camera, effects, shadows). */
   applySettings(): void {
     this.postfx.enabled = SETTINGS.postFx;
+    const skill = { EASY: 0.55, NORMAL: 1, HARD: 1.6, ULTIMATE: 2.4 }[SETTINGS.difficulty] ?? 1;
+    if (this.ai) this.ai.skill = skill;
+    if (this.ai1) this.ai1.skill = skill;
     this.camera.distanceScale = SETTINGS.cameraScale;
     this.renderer.shadowMap.enabled = SETTINGS.shadows;
     this.audio.setVolume(SETTINGS.master * SETTINGS.sfx);

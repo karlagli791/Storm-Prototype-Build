@@ -46,6 +46,7 @@ Balance); 24 fighters, 21 stages. Player 2 uses the second controller or the arr
 | O | R3 | **Leader Switch** (50% support gauge); the outgoing fighter finishes its action |
 | Dir + Space in a string / dash startup | | **Hollow Step** jump-cancel |
 | P / R | Options / Create | Pause / rematch |
+| 2P keyboard | (Options → 2P device) | Arrows move · Numpad 1 attack · 2 dash · 0 jump · 3 guard · 4 jutsu · 5 shuriken · 6 charge · 7 / 9 supports · 8 switch · . substitution · Enter ultimate |
 | F3 / F4 / F5 | | Hitbox visualiser / toggle the AI (the enemy starts as a standing training dummy; `?ai=1` starts it on) / next stage |
 
 The controller is polled every tick with a radial deadzone; the on-screen badge turns green when

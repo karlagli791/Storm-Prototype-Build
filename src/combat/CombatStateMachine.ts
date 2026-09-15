@@ -607,7 +607,7 @@ export class CombatStateMachine {
       cancelStart: 999, cancelEnd: 999, sparkCancelStart: 999, sparkCancelEnd: 999,
       forwardStep: 0,
       hitboxes: [{
-        id: `${d.code}_ult`, socket: SOCKET.CHEST, radius: 1.5, activeStart: ULTIMATE_CUTIN + 6, activeEnd: ULTIMATE_CUTIN + 40,
+        id: `${d.code}_ult`, socket: SOCKET.CHEST, radius: 2.1, activeStart: ULTIMATE_CUTIN + 6, activeEnd: ULTIMATE_CUTIN + 40,
         damage: 380, chakraGain: 0, reaction: HitReaction.TUMBLE, knockback: 26, launch: 7, hitstunFrames: 70, blockstunFrames: 30, guardDamage: 100,
         priority: HitPriority.ARMORED_JUTSU, armored: true,
       }],
@@ -719,7 +719,7 @@ export class CombatStateMachine {
         if (f.moveFrame % 2 === 0) { f.rig.socketWorld(SOCKET.CHEST, this.tmpB); this.effects.spriteBurst('light', this.tmpB, { color: f.def.color as number, count: 1, size: 1.6, life: 0.25, speed: 0, up: 0, additive: true, grow: 2 }); }
         f.forward(this.tmpA);
         const dist = f.distanceToTarget();
-        const speed = dist > 2.2 ? 26 : 0;
+        const speed = dist > 1.4 ? 26 : 0; // close in until the chest hitbox overlaps the target
         f.velocity.x = this.tmpA.x * speed;
         f.velocity.z = this.tmpA.z * speed;
         if (!f.grounded) f.velocity.y = Math.max(f.velocity.y, -2);
