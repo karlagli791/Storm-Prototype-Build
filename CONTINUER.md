@@ -189,3 +189,4 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 - 2026-09-13 11:18 — Enemy starts as a standing training dummy; F4 or ?ai=1 enables the AI
 - 2026-09-15 03:06 — Roster of 9 (Deidara, Mifune, Itachi, Gaara, Kakashi, Minato, Indra), Storm 2 character select, jutsu assists, render interpolation, ramp orientation fix, Electron shell
 - 2026-09-15 03:13 — Select-screen polish, engine-captured portraits for Mifune and Indra, VS splash, portable Windows build, docs for session 5
+- 2026-09-15 03:22 — Desktop packaging: 256 px app icon, ignore build/ and release/
