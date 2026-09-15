@@ -52,14 +52,21 @@ export class PlayerController {
     if (!flight) f.velocity.y += GRAVITY * dt;
     if (f.state === CombatState.DASH_STARTUP || f.state === CombatState.DASH_CHARGING) {
       // Hover in place vertically while winding up (keeps aerial dashes possible)
-      if (f.position.y > 0) f.velocity.y = 0;
+      if (f.position.y > f.groundY + 0.02) f.velocity.y = 0;
     }
     f.position.addScaledVector(f.velocity, dt);
 
-    if (f.position.y <= 0) {
-      f.position.y = 0;
+    // Terrain following: the floor under the fighter is the stage mesh height, not y = 0.
+    const gy = this.arena.groundY(f.position.x, f.position.z);
+    f.groundY = gy;
+    if (f.position.y <= gy + 0.001) {
+      f.position.y = gy;
       if (f.velocity.y < 0) f.velocity.y = 0;
       f.grounded = true;
+      f.doubleJumped = false;
+      f.airDashed = false;
+      f.airDashFrames = 0;
+      f.jumpCount = 0;
     } else {
       f.grounded = false;
     }
@@ -73,7 +80,7 @@ export class PlayerController {
       // Soft wall bump: bleed some speed
       f.velocity.multiplyScalar(0.7);
     }
-    if (f.position.y <= 0) f.grounded = true;
+    if (f.position.y <= f.groundY + 0.001) f.grounded = true;
 
     // 8. Rig
     f.rig.root.position.copy(f.position);
@@ -83,6 +90,9 @@ export class PlayerController {
         state: f.state,
         stateFrame: f.stateFrame,
         moveName: f.currentMove?.name ?? null,
+        airDash: f.airDashFrames > 0,
+        jumpCount: f.jumpCount,
+        awakened: f.awakened,
         moveClip: f.currentMove?.clip ?? null,
         moveFrame: f.moveFrame,
         moveTotal: f.currentMove?.totalFrames ?? 0,

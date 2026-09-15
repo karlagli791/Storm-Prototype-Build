@@ -30,6 +30,19 @@ export const CAMERA_PARAMS = {
   THETA_BIAS: 0.26,
   LAMBDA: 10.5,
   LOOK_LAMBDA: 14.0,
+  // Storm behind-the-shoulder framing: the camera sits behind and slightly beside the player,
+  // pulls back as the fighters separate, and looks at a point weighted toward the enemy.
+  BACK_MIN: 3.4,
+  BACK_K: 0.28,
+  BACK_MAX: 9.0,
+  SIDE: 1.35,
+  UP_MIN: 1.75,
+  UP_K: 0.12,
+  UP_MAX: 3.6,
+  LOOK_MIX: 0.38,
+  LOOK_UP: 1.05,
+  FOV_MIN: 44,
+  FOV_MAX: 60,
 };
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -91,18 +104,15 @@ export class DualTargetCamera {
     if (this.uSep.lengthSq() < 1e-6) this.uSep.set(0, 0, 1);
     this.uSep.normalize();
 
-    const D = clamp(P.D_MIN + P.K_D * d, P.D_MIN, P.D_MAX);
-    const H = clamp(P.H_MIN + P.K_H * d, P.H_MIN, P.H_MAX);
-
-    // Lateral normal and azimuth-biased view direction
+    // Behind-the-shoulder: back along the P1→P2 axis, offset to P1's right so P1 reads on the
+    // left of the frame, height rising with distance; look between the two, biased to the enemy.
+    const back = clamp(P.BACK_MIN + P.BACK_K * d, P.BACK_MIN, P.BACK_MAX);
+    const up = clamp(P.UP_MIN + P.UP_K * d, P.UP_MIN, P.UP_MAX);
     this.nLat.crossVectors(this.uSep, UP).normalize().multiplyScalar(this.side);
-    this.vDir
-      .copy(this.nLat)
-      .multiplyScalar(Math.cos(P.THETA_BIAS))
-      .addScaledVector(this.uSep, -Math.sin(P.THETA_BIAS));
-
-    this.cTarget.copy(this.pMid).addScaledVector(this.vDir, D);
-    this.cTarget.y += H;
+    this.cTarget.copy(p1).addScaledVector(this.uSep, -back).addScaledVector(this.nLat, P.SIDE);
+    this.cTarget.y = Math.max(p1.y, p2.y) * 0.35 + Math.min(p1.y, p2.y) * 0.65 + up;
+    this.pMid.copy(p1).lerp(p2, P.LOOK_MIX);
+    this.pMid.y += P.LOOK_UP;
 
     // Keep the camera inside the arena ceiling/walls with a soft margin so it never clips the cylinder.
     const rxz = Math.hypot(this.cTarget.x, this.cTarget.z);
@@ -145,7 +155,7 @@ export class DualTargetCamera {
     this.camera.lookAt(this.lookAt);
 
     // Field of view widens slightly as fighters separate, tightening framing in close range.
-    const fov = clamp(43 + d * 0.4, 43, 58);
+    const fov = clamp(P.FOV_MIN + d * 0.5, P.FOV_MIN, P.FOV_MAX);
     if (Math.abs(this.camera.fov - fov) > 0.01) {
       this.camera.fov = fov;
       this.camera.updateProjectionMatrix();

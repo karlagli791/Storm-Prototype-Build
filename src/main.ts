@@ -10,6 +10,8 @@ import { PAD } from './core/GamepadState';
 import { NARUTO_DEF, SASUKE_DEF } from './combat/CharacterDefs';
 import { ROSTER, findCharacter } from './combat/Roster';
 import { CharacterSelect, Selection, showVsSplash } from './ui/CharacterSelect';
+import { showUltimateCutIn, screenFlash, showAwakenBanner } from './ui/CutIn';
+import { AudioManager } from './audio/AudioManager';
 import { CharacterDef } from './core/Types';
 import { Fighter, Team, EventSink } from './combat/Fighter';
 import { CombatStateMachine } from './combat/CombatStateMachine';
@@ -31,6 +33,11 @@ export const STAGES = [
   { id: 'sd03a', name: 'HIDDEN LEAF FOREST' },
   { id: 'sd05a', name: 'FOREST OF QUIET MOVEMENT' },
   { id: 'sd01d', name: 'FOREST OF DEATH' },
+  { id: 'sd07a', name: "OROCHIMARU'S HIDEOUT" },
+  { id: 'sd08a', name: 'HIDDEN SAND GATE' },
+  { id: 'sd06a', name: 'FIVE-SEAL BARRIER CLIFF' },
+  { id: 'sd11a', name: 'MOUNT MYOBOKU' },
+  { id: 'sd05b', name: 'THE FINAL VALLEY' },
 ];
 
 const ROUND_SECONDS = 99;
@@ -46,6 +53,8 @@ class Game implements EventSink {
   hitboxes: HitboxManager;
   projectiles: Projectiles;
   support: SupportSystem;
+  audio = new AudioManager();
+  private prevStates = new Map<number, CombatState>();
   stageIndex = 0;
   stageLoading = false;
 
@@ -180,7 +189,7 @@ class Game implements EventSink {
       // Ensure leaders are the original ones and benches are hidden
       for (const f of [...team.present]) if (f !== team.active) team.retire(f);
       team.stats.health = team.stats.healthMax;
-      team.stats.chakra = 100;
+      team.stats.chakra = 60; // Storm pacing: the ultimate has to be charged for
       team.stats.chakraMax = 100;
       team.stats.subStocks = 4;
       team.stats.subRechargeProgress = 0;
@@ -210,6 +219,11 @@ class Game implements EventSink {
     this.relinkTargets();
     this.team1.active.yaw = this.team1.active.yawToTarget();
     this.team2.active.yaw = this.team2.active.yawToTarget();
+    // Round intro: both leaders play their entry clip (PL_ACT_BTL_BEFORE_LEADER) before "Go!".
+    this.team1.active.enterState(CombatState.INTRO);
+    this.team2.active.enterState(CombatState.INTRO);
+    for (const f of this.allFighters) { f.awakened = false; f.awakenTimer = 0; f.rig.setAwakened(false); }
+    this.prevStates.clear();
     this.projectiles.clear();
     this.support.reset();
     this.roundTime = ROUND_SECONDS;
@@ -278,6 +292,71 @@ class Game implements EventSink {
     if (kind === 'GUARD_BREAK') this.hud.showToast('GUARD BREAK', '#ff3f3f', 0.7);
     if (kind === 'WALL_SPLAT') this.hud.showToast('WALL SPLAT', '#ffffff', 0.6);
     if (kind === 'CLASH' && data.text === 'DASH CLASH!') this.hud.showToast('CLASH', '#cfe9ff', 0.5);
+    const who = this.allFighters.find((f) => f.id === data.attackerId);
+    switch (kind) {
+      case 'HIT': {
+        if ((data.damage ?? 0) <= 0) break;
+        const heavy = (data.damage ?? 0) >= 80;
+        const blade = who?.def.hasBlade;
+        this.audio.play(blade ? 'sword_hit' : heavy ? (Math.random() < 0.5 ? 'kick_hit2' : 'punch_hit2') : Math.random() < 0.5 ? 'punch_hit1' : 'kick_hit1', { pitchVar: 0.06 });
+        if (heavy) this.audio.play('hit_S', { volume: 0.6 });
+        break;
+      }
+      case 'GUARD_HIT': this.audio.play('guard', { pitchVar: 0.05 }); break;
+      case 'GUARD_BREAK': this.audio.play('exp1', { volume: 0.9 }); break;
+      case 'PARRY': this.audio.play('flash2'); break;
+      case 'CLASH': this.audio.play('chakHit'); break;
+      case 'SUB': this.audio.play('change'); break;
+      case 'SPARK': this.audio.play('dash2', { volume: 0.8 }); break;
+      case 'WALL_SPLAT': this.audio.play('groundHit2'); break;
+      case 'SWITCH': this.audio.play(data.text?.includes('SUPPORT') ? 'cutin_support' : 'change'); break;
+      case 'SFX': if (data.text) this.audio.play(data.text, { volume: 0.7, pitchVar: 0.05 }); break;
+      case 'ULTIMATE': {
+        if ((data.damage ?? 0) > 0) {
+          screenFlash();
+          this.audio.play('exp2');
+          this.audio.play(who?.def.ultimateSfx ?? 'raikiriHit', { volume: 0.9 });
+          this.hud.showToast(who?.def.ultimateName ?? 'ULTIMATE', '#ffd166', 1.2);
+        } else if (who) {
+          showUltimateCutIn(who.def, who.team === this.team1 ? 1 : 2);
+          this.audio.play('flash');
+          this.audio.play('cutin_support', { volume: 0.5 });
+        }
+        break;
+      }
+      case 'AWAKEN': {
+        if (who && data.text?.includes('AWAKENING') && !data.text.includes('ended')) {
+          showAwakenBanner(who.def);
+          this.audio.play('awake_open');
+          this.audio.play('awakeFlash', { volume: 0.8 });
+        } else this.audio.play('awake_off', { volume: 0.6 });
+        break;
+      }
+    }
+  }
+
+  /** State-transition sounds (dash, jump, landing, jutsu, throw, charge, KO). */
+  private stateSounds(present: Fighter[]): void {
+    for (const f of present) {
+      const prev = this.prevStates.get(f.id);
+      if (prev === f.state) continue;
+      this.prevStates.set(f.id, f.state);
+      switch (f.state) {
+        case CombatState.DASH_STARTUP: this.audio.play('dash', { volume: 0.7 }); break;
+        case CombatState.JUMPING: if (prev !== CombatState.COMBO_STRING && prev !== CombatState.JUTSU) this.audio.play('jump1', { volume: 0.6 }); break;
+        case CombatState.NINJA_MOVE:
+        case CombatState.HOLLOW_STEP: this.audio.play('jump2', { volume: 0.5 }); break;
+        case CombatState.IDLE_NEUTRAL:
+        case CombatState.RUNNING: if (prev === CombatState.JUMPING || prev === CombatState.NINJA_MOVE) this.audio.play('landing', { volume: 0.5 }); break;
+        case CombatState.JUTSU: this.audio.play(f.def.jutsuSfx ?? 'rasen', { volume: 0.9 }); break;
+        case CombatState.THROW: this.audio.play('shuriken', { volume: 0.7 }); break;
+        case CombatState.CHAKRA_CHARGE: this.audio.play('charge', { volume: 0.6 }); break;
+        case CombatState.COMBO_STRING: this.audio.play(f.def.hasBlade ? 'sword_swing' : 'punch_swing', { volume: 0.45, pitchVar: 0.08 }); break;
+        case CombatState.KNOCKDOWN: this.audio.play('down', { volume: 0.6 }); break;
+        case CombatState.DEAD: this.audio.play('ko'); break;
+        case CombatState.INTRO: if (f.team === this.team1) this.audio.play('battleStart'); break;
+      }
+    }
   }
 
   log(text: string): void {
@@ -333,6 +412,7 @@ class Game implements EventSink {
 
     // 4. Collision pass
     this.hitboxes.update([...this.team1.present, ...this.team2.present]);
+    this.stateSounds(present);
 
     // Retire autonomous outgoing fighters once their action completes
     for (const team of [this.team1, this.team2]) {
@@ -441,6 +521,8 @@ class Game implements EventSink {
       supportPortrait: team.bench.def.portrait ?? null,
       supportType: team.bench.def.supportType,
       supportReady: s.supportGauge >= BALANCE.SUPPORT_GAUGE_USE_NORMAL && team.bench.supportCooldown <= 0 && !team.bench.rig.root.visible,
+      awakened: f.awakened,
+      ultimateReady: s.chakra >= 90,
       act: bindingFor(f.state, { moveClip: null, moveDir: f.moveDirLocal, hitDir: f.lastHitDir, airborne: !f.grounded, falling: f.velocity.y < -0.5, stateFrame: f.stateFrame, framesLeft: f.stunFrames }).act,
     };
   }
@@ -504,8 +586,9 @@ async function boot(): Promise<void> {
   // Storm-style VS splash covers the asset load; the round is held until it fades.
   const hideSplash = showVsSplash(sel);
   window.storm = new Game(sel);
+  window.storm.audio.preload(['punch_hit1', 'punch_hit2', 'kick_hit1', 'kick_hit2', 'guard', 'dash', 'jump1', 'landing', 'punch_swing', 'battleStart', 'change', 'flash']);
   window.storm.paused = true;
-  setTimeout(() => { hideSplash(); window.storm.paused = false; }, 2800);
+  setTimeout(() => { hideSplash(); window.storm.paused = false; }, 1900);
 }
 void NARUTO_DEF; void SASUKE_DEF; void (null as unknown as CharacterDef);
 boot();

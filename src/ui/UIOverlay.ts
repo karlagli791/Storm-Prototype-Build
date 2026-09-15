@@ -30,6 +30,8 @@ export interface HudFighterData {
   supportType: 'ATTACK' | 'GUARD' | 'BALANCE';
   /** Support gauge at or above the call cost. */
   supportReady: boolean;
+  awakened: boolean;
+  ultimateReady: boolean;
   /** PL_ACT_* name of the current state (debug readout). */
   act: string;
 }
@@ -320,6 +322,14 @@ export class UIOverlay {
     ctx.font = '10px "Segoe UI", system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.fillText(f.code.toUpperCase() + '  ' + f.act.replace('PL_ACT_', ''), mirror ? barX + bw : barX, y + 32);
+    if (f.awakened || f.ultimateReady) {
+      // Storm-style status tags under the name: awakening pulse / ultimate ready
+      const t = performance.now() / 1000;
+      ctx.font = 'bold 11px "Segoe UI", system-ui, sans-serif';
+      const tag = f.awakened ? 'AWAKENED' : 'ULTIMATE READY';
+      ctx.fillStyle = f.awakened ? `rgba(255,${140 + Math.round(60 * Math.sin(t * 8))},60,0.95)` : `rgba(255,${210 + Math.round(40 * Math.sin(t * 6))},120,0.95)`;
+      ctx.fillText(tag, mirror ? barX + bw - 150 : barX + 150, y + 32);
+    }
     ctx.restore();
 
     // Life bar (green, Storm style) with lag bar

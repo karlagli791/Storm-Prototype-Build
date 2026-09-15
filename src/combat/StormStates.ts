@@ -35,6 +35,8 @@ export interface ClipContext {
   moveDir: HitDir;
   hitDir: HitDir;
   airborne: boolean;
+  airDash?: boolean;
+  awakened?: boolean;
   falling: boolean;
   stateFrame: number;
   /** Frames left in the state, when known (knockdown getup timing). */
@@ -63,6 +65,8 @@ export function bindingFor(state: CombatState, ctx: ClipContext): StateBinding {
         clips: [O(dirClip('{c}', ctx.moveDir, { F: 'dsf0', B: 'dsb0', L: 'dsl0', R: 'dsr0' })), L('{c}jmp0')],
       };
     case CombatState.JUMPING:
+      if (ctx.airDash)
+        return { act: 'PL_ACT_NMOVE_SIDE', anm: 'PL_ANM_DSH_' + ctx.moveDir, clips: [O(dirClip('{c}', ctx.moveDir, { F: 'dsf0', B: 'dsb0', L: 'dsl0', R: 'dsr0' })), L('{c}jmp1')] };
       return ctx.falling
         ? { act: 'PL_ACT_FALL', anm: 'PL_ANM_FALL0', clips: [L('1cmnfal0'), L('{c}jmp1'), L('{c}jmp0')] }
         : { act: 'PL_ACT_JMP_V', anm: 'PL_ANM_JMP0', clips: [O('{c}jmp0', '1cmnfal0'), L('{c}jmp1')] };
@@ -128,6 +132,12 @@ export function bindingFor(state: CombatState, ctx: ClipContext): StateBinding {
       return { act: 'PL_ACT_DODGE_WARP_ENEMY', anm: 'PL_ANM_NUT', clips: [O('1cmnddg0'), O('{c}lan0'), L('{c}nut0')] };
     case CombatState.SUPPORT_ACT:
       return { act: 'PL_ACT_SUP_COMBO_JOIN', anm: 'PL_ANM_S_ATK00', clips: ctx.moveClip ? [O(ctx.moveClip), O('{c}cma00')] : [O('{c}cma00')] };
+    case CombatState.INTRO:
+      return { act: 'PL_ACT_BTL_BEFORE_LEADER', anm: 'PL_ANM_ENT0', clips: [O('{c}ent0', '{c}nut0'), L('{c}nut0')] };
+    case CombatState.ULTIMATE:
+      return { act: 'PL_ACT_SPSKILL_DEMO_ATK', anm: 'PL_ANM_SPSKILL_1', clips: ctx.moveClip ? [O(ctx.moveClip), O('{c}skl1_s1', '{c}skl1_l1'), O('{c}skl1_s')] : [O('{c}skl1_s')] };
+    case CombatState.AWAKEN:
+      return { act: 'PL_ACT_AWAKE_BEGIN', anm: 'PL_ANM_AWAKE_S', clips: [O('{c}sklchg_s', '{c}sklchg_l'), L('{c}hola0'), L('{c}nut0')] };
     case CombatState.DEAD:
       return { act: 'PL_ACT_DEAD_DUEL', anm: 'PL_ANM_LOSE_L', clips: [O('{c}dow1', '1cmndwn0'), O('{c}dow0', '1cmndwn0'), L('1cmndwn0')] };
   }

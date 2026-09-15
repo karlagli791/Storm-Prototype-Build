@@ -1,0 +1,13 @@
+=== sd06a 03:55:54
+03:56:09 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+03:56:09 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+03:56:09 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_sd06a.glb 34283544 meshes 210
+34283544 public/assets/stage_sd06a.glb
+=== sd11a 03:56:09
+03:56:32 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+03:56:32 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+03:56:32 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_sd11a.glb 42751112 meshes 157
+42751112 public/assets/stage_sd11a.glb
+=== DONE 03:56:33

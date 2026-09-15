@@ -30,6 +30,18 @@ export class Fighter {
   /** Transform at the start of the current simulation tick (render interpolation). */
   prevPosition = new THREE.Vector3();
   prevYaw = 0;
+  /** Stage floor height under the fighter (terrain following). */
+  groundY = 0;
+  // --- aerial mobility
+  doubleJumped = false;
+  airDashed = false;
+  airDashFrames = 0;
+  jumpCount = 0;
+  // --- awakening / ultimate
+  awakened = false;
+  awakenTimer = 0;
+  ultimatePhase = 0;
+  ultimateLanded = false;
 
   state: CombatState = CombatState.IDLE_NEUTRAL;
   prevState: CombatState = CombatState.IDLE_NEUTRAL;

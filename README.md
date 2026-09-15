@@ -26,7 +26,10 @@ npm run build      # type-check + production bundle in dist/
 | Space | Cross / A | Jump. With a direction while running: **Ninja Move** lateral hop |
 | J | Circle / B | Attack. Stick up/down (or D-pad) on a follow-up = **Up / Down** branch |
 | K | Triangle + Cross (or R2) | **Chakra Dash** 15%. Hold = **Charged** 25%. Mid-string = **Spark Dash** 20%. Attack then dash within 4 frames = **Turbo Dash** |
-| N | Triangle (alone) | **Chakra Charge** (45 %/s, cancels into dash / jutsu / attack) |
+| N | Triangle (alone) | **Chakra Charge** (45 %/s, cancels into dash / jutsu / attack). Hold it at ≤50% health to **Awaken** (20 s, +30% damage, aura) |
+| M, or U with ≥90% chakra | Triangle + Circle with a full gauge | **Ultimate Jutsu**: cut-in, armored homing rush, big finisher (empties the gauge) |
+| Space in the air | Cross in the air | **Double jump**; with a direction = **air ninja move** |
+| J in the air | Circle in the air | **Air string** (3 hits, the last spikes the enemy down) |
 | H | Square / X | **Shuriken** throw (3% chakra, guardable, parryable, dashes pierce it) |
 | Y | L1 / R1 | **Support call** (50% support gauge): the bench fighter runs in for a combo join. Automatic interventions: Balance = Cover Fire, Guard = Dash Cut / Charge Guard, Attack = Strike Back |
 | L / Shift | L2 / L1 | Guard (guard sphere, durability 100, blue → yellow → red) |
@@ -159,6 +162,12 @@ npm run dist:win
 
 The second command writes a portable `.exe` and an NSIS installer to `release/`; installed builds
 check the GitHub releases of this repository for updates.
+
+## Audio and VFX
+
+Sound effects are Storm 2's own, decoded from the game's nus3bank files with vgmstream
+(`public/assets/sfx`, see CONTINUER §3). Particle sprites are Kenney's CC0 particle pack
+(`public/assets/vfx`). There is no music yet.
 
 ## Deviations from the blueprint
 

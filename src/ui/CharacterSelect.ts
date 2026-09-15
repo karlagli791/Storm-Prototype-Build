@@ -10,6 +10,8 @@
  */
 import { CharacterDef } from '../core/Types';
 import { GamepadState, PAD } from '../core/GamepadState';
+import { AudioManager } from '../audio/AudioManager';
+const menuAudio = new AudioManager();
 
 export interface StageOption { id: string; name: string; }
 export interface TeamPick { leader: CharacterDef; support: CharacterDef; }
@@ -46,8 +48,8 @@ const CSS = `
 #csel .cell .badge { position:absolute; right:.4vh; top:.4vh; font-size:1.5vh; font-weight:800; padding:.1vh .6vh; border-radius:.4vh; background:#ff6a3c; }
 #csel .cell .badge.b2 { background:#3cb8ff; }
 #csel .cell .badge.sup { top:auto; bottom:.4vh; font-size:1.2vh; background:rgba(0,0,0,.6); }
-#csel .stages { position:absolute; left:50%; top:22%; transform:translateX(-50%); display:flex; gap:2vh; }
-#csel .stage { width:26vh; height:15vh; border-radius:1.4vh; background:#123; box-shadow:inset 0 0 0 .3vh rgba(255,255,255,.35); display:flex; align-items:flex-end; justify-content:center; padding:1vh; box-sizing:border-box; font-size:1.7vh; letter-spacing:.15em; text-align:center; text-shadow:0 2px 4px #000; background-size:cover; background-position:center; }
+#csel .stages { position:absolute; left:50%; top:22%; transform:translateX(-50%); display:flex; flex-wrap:wrap; justify-content:center; gap:2vh; width:90vw; }
+#csel .stage { width:22vh; height:13vh; border-radius:1.4vh; background:#123; box-shadow:inset 0 0 0 .3vh rgba(255,255,255,.35); display:flex; align-items:flex-end; justify-content:center; padding:1vh; box-sizing:border-box; font-size:1.7vh; letter-spacing:.15em; text-align:center; text-shadow:0 2px 4px #000; background-size:cover; background-position:center; }
 #csel .stage.sel { transform:scale(1.08); box-shadow:0 0 0 .5vh #fff, 0 0 2.4vh .6vh rgba(255,240,180,.9); }
 #csel .team { position:absolute; top:64%; display:flex; gap:1.2vh; align-items:center; }
 #csel .team.p1 { left:calc(50% - 33vh); } #csel .team.p2 { right:calc(50% - 33vh); flex-direction:row-reverse; }
@@ -154,6 +156,9 @@ export class CharacterSelect {
   }
 
   private act(a: string): void {
+    if (a === 'ok') menuAudio.play('catch_ok', { volume: 0.7 });
+    else if (a === 'back') menuAudio.play('menu_cancel', { volume: 0.7 });
+    else menuAudio.play('menu_window', { volume: 0.5 });
     if (this.step === 'STAGE') {
       if (a === 'left') this.stageCursor = (this.stageCursor + this.stages.length - 1) % this.stages.length;
       else if (a === 'right') this.stageCursor = (this.stageCursor + 1) % this.stages.length;

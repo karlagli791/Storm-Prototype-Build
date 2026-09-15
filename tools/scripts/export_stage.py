@@ -110,6 +110,17 @@ for o in bpy.data.objects:
     o.select_set(True)
 bpy.context.view_layer.objects.active = root
 os.makedirs(os.path.dirname(out), exist_ok=True)
+# Keep the GLB under GitHub's 100 MB file limit: stage textures above 1024 px are downscaled.
+MAX_TEX = 1024
+for img in bpy.data.images:
+    try:
+        w, h = img.size
+        if w > MAX_TEX or h > MAX_TEX:
+            f = MAX_TEX / max(w, h)
+            img.scale(max(4, int(w * f)), max(4, int(h * f)))
+            print("downscaled", img.name, (w, h), "->", img.size[:])
+    except Exception as e:
+        print("scale failed", img.name, e)
 bpy.ops.export_scene.gltf(filepath=out, export_format='GLB', use_selection=True, export_animations=False, export_apply=True, export_skins=False, export_yup=True, export_image_format='AUTO', export_materials='EXPORT', export_texcoords=True, export_normals=True)
 print("MATERIALS untextured:", sum(1 for m in bpy.data.materials if not any(n.type=='TEX_IMAGE' and n.image for n in (m.node_tree.nodes if m.node_tree else []))), "of", len(bpy.data.materials))
 print("EXPORTED", out, os.path.getsize(out), "meshes", len(keep))

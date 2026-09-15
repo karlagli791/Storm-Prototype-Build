@@ -41,7 +41,7 @@ import {
 } from '../core/Types';
 import { DashKind, EventSink, Fighter } from './Fighter';
 import { BALANCE } from './StormStates';
-import { HitDir } from '../core/Types';
+import { HitDir, HitPriority } from '../core/Types';
 import { Effects } from '../render/Effects';
 import { SOCKET } from './CharacterDefs';
 
@@ -60,6 +60,15 @@ const DASH_IMPACT_FRAMES = 8;
 const DASH_REBOUND_FRAMES = 16;
 const NINJA_MOVE_FRAMES = 16;
 const JUTSU_COST = 30;
+/** SPSKILL: needs a nearly full gauge (retail: 2nd ultimate consumes 66) and empties it. */
+const ULTIMATE_MIN_CHAKRA = 90;
+const ULTIMATE_TOTAL = 150;
+const ULTIMATE_CUTIN = 26;
+const INTRO_FRAMES = 100;
+const AWAKEN_FRAMES = 42;
+const AWAKEN_DURATION = 20;
+const AWAKEN_HP_RATIO = 0.5;
+const AWAKEN_DAMAGE_MULT = 1.3;
 const GUARD_COUNTER_TOTAL = 20;
 const KNOCKDOWN_FRAMES = 34;
 const KNOCKDOWN_OTG_WINDOW = 12;
@@ -81,6 +90,15 @@ export class CombatStateMachine {
   // Per-tick update
   // =========================================================================
   update(f: Fighter, dt: number, cam: CameraBasis): void {
+    if (f.awakened) {
+      f.awakenTimer -= dt;
+      f.stats.chakra = Math.max(0, f.stats.chakra - 2.5 * dt);
+      if (f.awakenTimer <= 0 || (f.stats.chakra <= 0 && f.state !== CombatState.ULTIMATE)) {
+        f.awakened = false;
+        f.rig.setAwakened(false);
+        this.events.emit('AWAKEN', { attackerId: f.id, defenderId: -1, damage: 0, text: `${f.def.displayName}: awakening ended`, color: 0xffb27a });
+      }
+    }
     f.stateFrame++;
     if (f.subLockFrames > 0) f.subLockFrames--;
     if (f.invulnFrames > 0) f.invulnFrames--;
@@ -112,6 +130,9 @@ export class CombatStateMachine {
       case CombatState.NINJA_MOVE: this.updateNinjaMove(f, dt, mag); break;
       case CombatState.HOLLOW_STEP: this.updateHollowStep(f, dt, mag); break;
       case CombatState.JUMPING: this.updateJumping(f, dt, mag); break;
+      case CombatState.INTRO: this.updateIntro(f); break;
+      case CombatState.ULTIMATE: this.updateUltimate(f, dt); break;
+      case CombatState.AWAKEN: this.updateAwaken(f, dt); break;
       case CombatState.DASH_STARTUP: this.updateDashStartup(f, dt, mag); break;
       case CombatState.DASH_CHARGING: this.updateDashCharging(f, dt); break;
       case CombatState.DASH_HOMING:
@@ -142,13 +163,25 @@ export class CombatStateMachine {
   // ------------------------------------------------------------ prototype-informed states
   /** PL_ACT_CHAKRA_CHARGE: hold the chakra button with no direction to regenerate quickly. */
   private updateChakraCharge(f: Fighter, dt: number, mag: number): void {
+    // Awakening: keep the chakra button held with half health or less (AWAKE_BEGIN).
+    if (!f.awakened && f.stats.health <= f.stats.healthMax * AWAKEN_HP_RATIO && f.stateFrame >= 45 && f.input.buffer.isHeld(InputFlag.CHARGE)) {
+      this.startAwaken(f);
+      return;
+    }
     this.applyFriction(f, dt, 50);
     this.faceTarget(f, 0.3);
     const buf = f.input.buffer;
     f.stats.gainChakra(BALANCE.CHAKRA_RECOVER_AT_CHARGE * dt);
     if (f.stateFrame % 4 === 0) this.effects.chargeAura(f.position, f.def.code === '2nrt' ? 0x7dd3ff : 0x9fb7ff);
     if (buf.consume(InputFlag.DASH) && f.stats.canSpendChakra(CHAKRA_COST_DASH)) { this.startDash(f, 'STANDARD'); return; }
-    if (buf.consume(InputFlag.JUTSU) && f.stats.spendChakra(JUTSU_COST)) { this.startJutsu(f); return; }
+    if (buf.consume(InputFlag.ULTIMATE)) {
+      if (f.stats.chakra >= ULTIMATE_MIN_CHAKRA) { this.startUltimate(f); return; }
+      buf.flush(InputFlag.ULTIMATE);
+    }
+    if (buf.consume(InputFlag.JUTSU)) {
+      if (f.stats.chakra >= ULTIMATE_MIN_CHAKRA && f.target && f.distanceToTarget() < 14) { this.startUltimate(f); return; }
+      if (f.stats.spendChakra(JUTSU_COST)) { this.startJutsu(f); return; }
+    }
     if (buf.consume(InputFlag.ATTACK)) { this.startCombo(f, this.branchFromHeld(f)); return; }
     if (!buf.isHeld(InputFlag.CHARGE) || mag > 0.15 || buf.isHeld(InputFlag.GUARD)) f.enterState(CombatState.IDLE_NEUTRAL);
   }
@@ -248,7 +281,18 @@ export class CombatStateMachine {
       f.enterState(CombatState.GUARDING);
       return true;
     }
+    if (buf.consume(InputFlag.ULTIMATE)) {
+      if (f.stats.chakra >= ULTIMATE_MIN_CHAKRA && f.target) {
+        this.startUltimate(f);
+        return true;
+      }
+    }
     if (buf.consume(InputFlag.JUTSU)) {
+      // Storm: with a (nearly) full gauge the jutsu input becomes the ultimate.
+      if (f.stats.chakra >= ULTIMATE_MIN_CHAKRA && f.target && f.distanceToTarget() < 14) {
+        this.startUltimate(f);
+        return true;
+      }
       if (f.stats.spendChakra(JUTSU_COST)) {
         this.startJutsu(f);
         return true;
@@ -296,7 +340,7 @@ export class CombatStateMachine {
 
   private stringFor(f: Fighter, branch: ComboBranch): MoveDef[] {
     const d = f.def;
-    return branch === 'UP' ? d.upString.moves : branch === 'DOWN' ? d.downString.moves : d.neutralString.moves;
+    return branch === 'UP' ? d.upString.moves : branch === 'DOWN' ? d.downString.moves : branch === 'AIR' ? (d.airString?.moves ?? d.neutralString.moves) : d.neutralString.moves;
   }
 
   // ------------------------------------------------------------- starters
@@ -385,7 +429,7 @@ export class CombatStateMachine {
       f.enterState(CombatState.IDLE_NEUTRAL);
       return;
     }
-    const speed = f.def.runSpeed * mag;
+    const speed = f.def.runSpeed * mag * (f.awakened ? 1.15 : 1);
     this.tmpA.copy(this.moveDir).multiplyScalar(speed);
     this.tmpB.set(f.velocity.x, 0, f.velocity.z);
     this.tmpC.subVectors(this.tmpA, this.tmpB);
@@ -475,11 +519,148 @@ export class CombatStateMachine {
       return;
     }
     if (buf.consume(InputFlag.ATTACK)) {
-      this.startCombo(f, 'NEUTRAL');
+      this.startCombo(f, 'AIR');
       return;
+    }
+    if (buf.consume(InputFlag.JUMP)) {
+      if (mag > 0.15 && !f.airDashed) {
+        // Air ninja move: a sideways burst (PL_ACT_NMOVE_SIDE in the air), once per jump.
+        f.airDashed = true;
+        f.airDashFrames = 14;
+        f.velocity.x = this.moveDir.x * 13;
+        f.velocity.z = this.moveDir.z * 13;
+        f.velocity.y = Math.max(f.velocity.y, 3.0);
+        const p = f.position.clone(); p.y += 0.6;
+        this.effects.smokePuff(p, 0xe8e8ff, 6);
+        this.events.emit('SFX', { attackerId: f.id, defenderId: -1, damage: 0, text: 'dash' });
+      } else if (!f.doubleJumped) {
+        // Double jump (JMP1): resets the arc and replays the jump clip.
+        f.doubleJumped = true;
+        f.jumpCount++;
+        f.velocity.y = JUMP_VELOCITY * 0.92;
+        f.stateFrame = 0;
+        const p = f.position.clone(); p.y += 0.2;
+        this.effects.smokePuff(p, 0xffffff, 5);
+        this.events.emit('SFX', { attackerId: f.id, defenderId: -1, damage: 0, text: 'jump2' });
+      }
+    }
+    if (f.airDashFrames > 0) {
+      f.airDashFrames--;
+      if (f.velocity.y < -1) f.velocity.y = -1; // glide through the burst
     }
     if (f.grounded && f.stateFrame > 2) {
       f.enterState(mag > 0.15 ? CombatState.RUNNING : CombatState.IDLE_NEUTRAL);
+    }
+  }
+
+  // --------------------------------------------------------------- intro / ultimate / awakening
+  private updateIntro(f: Fighter): void {
+    f.velocity.set(0, 0, 0);
+    f.invulnFrames = 2;
+    this.faceTarget(f, 1);
+    f.input.buffer.clear();
+    if (f.stateFrame >= INTRO_FRAMES) f.enterState(CombatState.IDLE_NEUTRAL);
+  }
+
+  private ultimateMove(f: Fighter): MoveDef {
+    const d = f.def;
+    return {
+      name: `${d.code}_ultimate`,
+      clip: d.ultimateClip ?? `${d.code}spl1`,
+      totalFrames: ULTIMATE_TOTAL,
+      cancelStart: 999, cancelEnd: 999, sparkCancelStart: 999, sparkCancelEnd: 999,
+      forwardStep: 0,
+      hitboxes: [{
+        id: `${d.code}_ult`, socket: SOCKET.CHEST, radius: 1.5, activeStart: ULTIMATE_CUTIN + 6, activeEnd: ULTIMATE_CUTIN + 40,
+        damage: 380, chakraGain: 0, reaction: HitReaction.TUMBLE, knockback: 26, launch: 7, hitstunFrames: 70, blockstunFrames: 30, guardDamage: 100,
+        priority: HitPriority.ARMORED_JUTSU, armored: true,
+      }],
+    };
+  }
+
+  private startUltimate(f: Fighter): void {
+    f.stats.chakra = 0;
+    f.enterState(CombatState.ULTIMATE);
+    f.beginMove(this.ultimateMove(f), 'NEUTRAL', 0);
+    f.ultimatePhase = 0;
+    f.ultimateLanded = false;
+    f.velocity.set(0, 0, 0);
+    this.faceTarget(f, 1);
+    const t = f.target;
+    if (t) t.hitstopFrames = Math.max(t.hitstopFrames, ULTIMATE_CUTIN);
+    f.hitstopFrames = 0;
+    this.events.emit('ULTIMATE', { attackerId: f.id, defenderId: t?.id ?? -1, damage: 0, text: `${f.def.displayName}: ${f.def.ultimateName ?? 'ULTIMATE JUTSU'}`, color: 0xffd166, shake: 0.35 });
+  }
+
+  private updateUltimate(f: Fighter, dt: number): void {
+    const move = f.currentMove;
+    const t = f.target;
+    if (!move) { f.enterState(CombatState.IDLE_NEUTRAL); return; }
+    f.moveFrame++;
+    f.invulnFrames = 2; // armored through the whole sequence
+    if (f.moveFrame <= ULTIMATE_CUTIN) {
+      // Cut-in: both fighters hold while the portrait slides in.
+      f.velocity.set(0, 0, 0);
+      this.faceTarget(f, 1);
+      if (t) t.hitstopFrames = Math.max(t.hitstopFrames, 1);
+      f.ultimatePhase = 0;
+      return;
+    }
+    const landed = f.landedHitIds.size > 0;
+    if (landed && !f.ultimateLanded) {
+      // Finisher connected: long freeze, camera slam, the enemy is sent flying by the hitbox.
+      f.ultimateLanded = true;
+      f.ultimatePhase = 2;
+      f.velocity.set(0, 0, 0);
+      f.hitstopFrames = 22;
+      if (t) t.hitstopFrames = 22;
+      const p = f.position.clone(); p.y += 1;
+      this.effects.clashBurst(p);
+      this.events.emit('ULTIMATE', { attackerId: f.id, defenderId: t?.id ?? -1, damage: 380, text: `${f.def.displayName}: ${f.def.ultimateName ?? 'ULTIMATE'} HIT!`, color: 0xffffff, shake: 0.8 });
+      return;
+    }
+    if (!f.ultimateLanded) {
+      // Homing rush toward the enemy until contact or the active window closes.
+      f.ultimatePhase = 1;
+      const hb = move.hitboxes[0];
+      if (f.moveFrame <= hb.activeEnd && t) {
+        this.faceTarget(f, 1);
+        f.forward(this.tmpA);
+        const dist = f.distanceToTarget();
+        const speed = dist > 2.2 ? 26 : 0;
+        f.velocity.x = this.tmpA.x * speed;
+        f.velocity.z = this.tmpA.z * speed;
+        if (!f.grounded) f.velocity.y = Math.max(f.velocity.y, -2);
+        if (f.moveFrame % 3 === 0) { const p = f.position.clone(); p.y += 0.8; this.effects.dashTrail(p, f.def.color as number); }
+      } else {
+        this.applyFriction(f, dt, 60);
+        if (f.moveFrame >= hb.activeEnd + 24) f.enterState(f.grounded ? CombatState.IDLE_NEUTRAL : CombatState.JUMPING); // whiffed
+      }
+      return;
+    }
+    this.applyFriction(f, dt, 60);
+    if (f.moveFrame >= move.totalFrames) f.enterState(f.grounded ? CombatState.IDLE_NEUTRAL : CombatState.JUMPING);
+  }
+
+  private startAwaken(f: Fighter): void {
+    f.enterState(CombatState.AWAKEN);
+    f.velocity.set(0, 0, 0);
+    f.invulnFrames = AWAKEN_FRAMES;
+    this.events.emit('AWAKEN', { attackerId: f.id, defenderId: -1, damage: 0, text: `${f.def.displayName}: AWAKENING`, color: 0xff9a3c, shake: 0.4 });
+  }
+
+  private updateAwaken(f: Fighter, dt: number): void {
+    this.applyFriction(f, dt, 80);
+    f.invulnFrames = 2;
+    if (f.stateFrame % 4 === 0) { const p = f.position.clone(); p.y += 0.9; this.effects.chargeAura(p, 0xff7a1a); }
+    if (f.stateFrame >= AWAKEN_FRAMES) {
+      f.awakened = true;
+      f.awakenTimer = AWAKEN_DURATION;
+      f.stats.chakra = Math.max(f.stats.chakra, 40);
+      f.rig.setAwakened(true, (f.def.color as number) === 0x1a1a1a ? 0xff7a1a : 0xff7a1a);
+      const p = f.position.clone(); p.y += 1;
+      this.effects.clashBurst(p);
+      f.enterState(CombatState.IDLE_NEUTRAL);
     }
   }
 
@@ -600,6 +781,13 @@ export class CombatStateMachine {
 
     // Track the target during startup, lock during active frames
     if (f.moveFrame < activeStart) this.faceTarget(f, 0.5);
+
+    if (f.comboBranch === 'AIR') {
+      // Aerial string: hang in the air through the swing, drop with the last (spike) hit.
+      const last = f.comboIndex >= this.stringFor(f, 'AIR').length - 1;
+      if (!last && f.moveFrame <= activeEnd + 4) f.velocity.y = Math.max(f.velocity.y, -1.5);
+      if (f.grounded && f.moveFrame > 4) { f.enterState(CombatState.IDLE_NEUTRAL); return; }
+    }
 
     // Forward step during the strike, halted when already in contact range
     const dist = f.distanceToTarget();
@@ -831,9 +1019,10 @@ export class CombatStateMachine {
     t.forward(this.tmpA);
     const upper = !f.grounded && f.position.y > 1.0;
     f.position.copy(t.position).addScaledVector(this.tmpA, upper ? -1.2 : -SUB_TELEPORT_DISTANCE);
-    f.position.y = upper ? t.position.y + 2.6 : t.grounded ? 0 : t.position.y;
+    f.position.y = upper ? t.position.y + 2.6 : t.grounded ? t.groundY : t.position.y;
     f.velocity.set(0, 0, 0);
-    f.grounded = f.position.y <= 0.001;
+    f.groundY = t.groundY;
+    f.grounded = f.position.y <= f.groundY + 0.001;
     f.yaw = f.yawToTarget();
     f.stunFrames = 0;
     f.bounceOnLand = false;
@@ -850,7 +1039,7 @@ export class CombatStateMachine {
   /** Apply a clean hit to `defender`. Returns the damage dealt. */
   applyHit(defender: Fighter, attacker: Fighter, hb: HitboxDef, point: THREE.Vector3, opts: { hitstop?: number; direction?: THREE.Vector3 } = {}): number {
     if (defender.state === CombatState.DEAD) return 0;
-    const dmg = defender.stats.applyDamage(hb.damage);
+    const dmg = defender.stats.applyDamage(hb.damage * (attacker.awakened ? AWAKEN_DAMAGE_MULT : 1));
     attacker.stats.gainChakra(hb.chakraGain);
     // RATE_DAMAGE_LIFE_TO_CHAKRA: taking damage feeds the victim's chakra a little
     defender.stats.gainChakra(dmg * BALANCE.RATE_DAMAGE_LIFE_TO_CHAKRA);

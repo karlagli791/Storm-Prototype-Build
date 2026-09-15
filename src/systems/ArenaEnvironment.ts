@@ -70,6 +70,33 @@ export class ArenaEnvironment {
     this.proceduralWall.visible = true;
   }
 
+  private floorMeshes: THREE.Mesh[] = [];
+  private heightCache = new Map<number, number>();
+  private heightRay = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 400);
+
+  /**
+   * Floor height under (x, z) so fighters follow uneven ground instead of floating or sinking.
+   * Raycast against the stage's floor meshes, cached on a 0.5 m grid (the ray only fires for cells
+   * nobody has visited yet). Flat 0 when no stage floor is loaded.
+   */
+  groundY(x: number, z: number): number {
+    if (!this.floorMeshes.length) return 0;
+    const gx = Math.round(x * 2), gz = Math.round(z * 2);
+    const key = (gx + 4096) * 8192 + (gz + 4096);
+    const hit = this.heightCache.get(key);
+    if (hit !== undefined) return hit;
+    this.heightRay.ray.origin.set(gx * 0.5, 120, gz * 0.5);
+    const res = this.heightRay.intersectObjects(this.floorMeshes, false);
+    let y = 0;
+    if (res.length) {
+      // Take the first hit at or below +4 m (canopy / bridge decks above the arena are skipped).
+      const h = res.find((r) => r.point.y <= 4.0) ?? res[res.length - 1];
+      y = h.point.y;
+    }
+    this.heightCache.set(key, y);
+    return y;
+  }
+
   async tryLoadStage(path: string): Promise<boolean> {
     try {
       const head = await fetch(path, { method: 'HEAD' });
@@ -87,6 +114,8 @@ export class ArenaEnvironment {
       // CC2 authors the fighting floor at y=0, so fall back to that rather than the scene's lowest
       // point (which is a river bed / backdrop skirt and would lift the whole stage).
       const floorMeshes: THREE.Mesh[] = [];
+      this.floorMeshes = floorMeshes;
+      this.heightCache.clear();
       scene.updateMatrixWorld(true);
       scene.traverse((o) => {
         const m = o as THREE.Mesh;
@@ -107,6 +136,7 @@ export class ArenaEnvironment {
         }
       }
       scene.position.y -= floorY;
+      scene.updateMatrixWorld(true);
       scene.traverse((o) => {
         const m = o as THREE.Mesh;
         if (!m.isMesh) return;
@@ -188,6 +218,7 @@ export class ArenaEnvironment {
         m.castShadow = false;
       });
       this.stageRoot = scene;
+      this.heightCache.clear();
       this.stageName = path.split('/').pop() ?? path;
       this.group.add(scene);
       this.proceduralFloor.visible = false;

@@ -32,6 +32,9 @@ interface TemplateOpts {
   /** Borrow another character's animation set (same skeleton family). */
   animBank?: string;
   portrait?: string;
+  ultimateName?: string;
+  jutsuSfx?: string;
+  ultimateSfx?: string;
 }
 
 function hb(p: Partial<HitboxDef> & Pick<HitboxDef, 'id' | 'socket' | 'activeStart' | 'activeEnd'>): HitboxDef {
@@ -84,6 +87,16 @@ export function makeTemplateDef(o: TemplateOpts): CharacterDef {
       move({ name: `${c}_dn2`, clip: clip('cmb02'), totalFrames: 34, hitboxes: [hb({ id: `${c}d2`, activeStart: 10, activeEnd: 15, damage: 80, reaction: HitReaction.CRUMPLE, knockback: 1.0, launch: 0, hitstunFrames: 50, ...sock(SOCKET.R_FOOT) })] }),
     ],
   };
+  // Aerial string (○ in the air): cmr clips where the character has them, else the ground string's
+  // first hits; the last hit spikes the enemy to the ground.
+  const air: ComboStringDef = {
+    branch: 'AIR',
+    moves: [
+      move({ name: `${c}_air1`, clip: clip('cmr00'), totalFrames: 20, forwardStep: 1.5, hitboxes: [hb({ id: `${c}a1`, activeStart: 5, activeEnd: 10, damage: 34, ...sock(SOCKET.R_HAND) })] }),
+      move({ name: `${c}_air2`, clip: clip('cmr01'), totalFrames: 20, forwardStep: 1.5, hitboxes: [hb({ id: `${c}a2`, activeStart: 5, activeEnd: 10, damage: 34, ...sock(SOCKET.L_HAND) })] }),
+      move({ name: `${c}_air3`, clip: clip('cmr02'), totalFrames: 26, forwardStep: 1.0, hitboxes: [hb({ id: `${c}a3`, activeStart: 7, activeEnd: 12, damage: 70, reaction: HitReaction.SPIKE, knockback: 3.0, launch: -16.0, hitstunFrames: 40, ...sock(SOCKET.R_FOOT) })] }),
+    ],
+  };
   const jutsu: MoveDef = move({
     name: `${c}_jutsu`, clip: clip('skl1_s'), totalFrames: 58, forwardStep: o.jutsuRange ?? 8.0,
     cancelStart: 999, cancelEnd: 999, sparkCancelStart: 999, sparkCancelEnd: 999,
@@ -111,6 +124,11 @@ export function makeTemplateDef(o: TemplateOpts): CharacterDef {
     upString: up,
     downString: down,
     jutsu,
+    airString: air,
+    ultimateName: o.ultimateName,
+    ultimateClip: `${bank}spl1_s`,
+    jutsuSfx: o.jutsuSfx,
+    ultimateSfx: o.ultimateSfx,
     hurtboxes: [
       { socket: SOCKET.CHEST, radius: 0.55 },
       { socket: SOCKET.HEAD, radius: 0.35 },
@@ -130,36 +148,43 @@ export function makeTemplateDef(o: TemplateOpts): CharacterDef {
 export const DEIDARA_DEF = makeTemplateDef({
   code: '2ddr', displayName: 'DEIDARA', title: 'Akatsuki · Explosion Release', jutsuName: 'C1: Explosive Clay',
   supportType: 'BALANCE', color: 0xf2d24a, runSpeed: 9.0, jutsuRange: 12, jutsuArmored: false,
+  ultimateName: 'C2: Dragon', jutsuSfx: 'exp1', ultimateSfx: 'exp2',
 });
 export const MIFUNE_DEF = makeTemplateDef({
   code: '3mfn', displayName: 'MIFUNE', title: 'Land of Iron · Samurai General', jutsuName: 'Iai: Lightning-Speed Slash',
   supportType: 'ATTACK', color: 0xd8d0c0, runSpeed: 9.4, blade: true, finisher: 'cmb03',
+  ultimateName: 'Samurai Sabre Technique', jutsuSfx: 'sword_swing', ultimateSfx: 'sword_hit',
 });
 export const ITACHI_DEF = makeTemplateDef({
   code: '2itc', displayName: 'ITACHI UCHIHA', title: 'Akatsuki · Sharingan', jutsuName: 'Fire Style: Great Fireball',
   supportType: 'ATTACK', color: 0x2a2a3a, runSpeed: 9.2, finisher: 'cma03', jutsuRange: 11,
+  ultimateName: 'Amaterasu', jutsuSfx: 'goukakyu', ultimateSfx: 'exp2',
 });
 export const GAARA_DEF = makeTemplateDef({
   code: '2gar', displayName: 'GAARA', title: 'Fifth Kazekage', jutsuName: 'Sand Coffin',
   supportType: 'GUARD', color: 0xb03a2e, runSpeed: 8.6, health: 1050, finisher: 'cma03', jutsuRange: 10,
+  ultimateName: 'Sand Tsunami', jutsuSfx: 'gar_sand2', ultimateSfx: 'gar_sandHit',
 });
 export const KAKASHI_DEF = makeTemplateDef({
   code: '2kks', displayName: 'KAKASHI HATAKE', title: 'Copy Ninja', jutsuName: 'Lightning Blade',
   supportType: 'BALANCE', color: 0xc9c9c9, runSpeed: 9.6, finisher: 'cma03',
+  ultimateName: 'Lightning Blade: Double', jutsuSfx: 'raikiri', ultimateSfx: 'raikiriHit',
 });
 export const MINATO_DEF = makeTemplateDef({
   code: '2fou', displayName: 'MINATO NAMIKAZE', title: 'Fourth Hokage · Yellow Flash', jutsuName: 'Rasengan',
   supportType: 'ATTACK', color: 0xf5c542, runSpeed: 10.2, health: 950,
+  ultimateName: 'Flying Thunder God: Level 2', jutsuSfx: 'rasen', ultimateSfx: 'rasen2',
 });
 export const INDRA_DEF = makeTemplateDef({
   code: '9ind', displayName: 'INDRA OTSUTSUKI', title: 'Son of the Sage · Progenitor', jutsuName: 'Susano\'o Blade',
   supportType: 'ATTACK', color: 0x4b2e5a, runSpeed: 9.4, health: 1050, animBank: '2ssk', blade: false,
-  portrait: 'assets/ui/player_9ind.png',
+  portrait: 'assets/ui/player_9ind.png', ultimateName: "Susano'o: Sword of Indra", jutsuSfx: 'adv_chidori', ultimateSfx: 'raikiriHit',
 });
 
 const art = (code: string) => ({ icon: `assets/ui/sel/icon_${code}.png`, stand: `assets/ui/sel/stand_${code}.png`, vsFace: `assets/ui/sel/vs_${code}.png` });
-export const NARUTO_SEL: CharacterDef = { ...NARUTO_DEF, title: 'Hidden Leaf · Jinchuriki of the Nine-Tails', jutsuName: 'Rasengan', ...art('2nrt') };
-export const SASUKE_SEL: CharacterDef = { ...SASUKE_DEF, title: 'Taka · Sharingan', jutsuName: 'Chidori', ...art('2ssk') };
+const airFor = (code: string): ComboStringDef => makeTemplateDef({ code, displayName: code, title: '', jutsuName: '', supportType: 'BALANCE', color: 0xffffff }).airString!;
+export const NARUTO_SEL: CharacterDef = { ...NARUTO_DEF, title: 'Hidden Leaf · Jinchuriki of the Nine-Tails', jutsuName: 'Rasengan', ...art('2nrt'), airString: airFor('2nrt'), ultimateName: 'Giant Rasengan', ultimateClip: '2nrtspl1_s', jutsuSfx: 'rasen', ultimateSfx: 'rasen2' };
+export const SASUKE_SEL: CharacterDef = { ...SASUKE_DEF, title: 'Taka · Sharingan', jutsuName: 'Chidori', ...art('2ssk'), airString: airFor('2ssk'), ultimateName: 'Kirin', ultimateClip: '2sskspl1_s', jutsuSfx: 'adv_chidori', ultimateSfx: 'raikiriHit' };
 
 /** Select-screen order (Storm 2 layout: heroes first, then the Shippuden roster). */
 export const ROSTER: CharacterDef[] = [NARUTO_SEL, SASUKE_SEL, KAKASHI_DEF, MINATO_DEF, GAARA_DEF, ITACHI_DEF, DEIDARA_DEF, MIFUNE_DEF, INDRA_DEF];

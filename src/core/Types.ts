@@ -93,6 +93,12 @@ export enum CombatState {
   THROW = 'THROW',
   /** PL_ACT_SUP_* — a support character performing an intervention (autonomous). */
   SUPPORT_ACT = 'SUPPORT_ACT',
+  /** PL_ACT_BTL_BEFORE_LEADER — round intro (entry clip), no input. */
+  INTRO = 'INTRO',
+  /** PL_ACT_SPSKILL_* — ultimate jutsu: cut-in, armored homing rush, finisher. */
+  ULTIMATE = 'ULTIMATE',
+  /** PL_ACT_AWAKE_BEGIN — awakening transformation. */
+  AWAKEN = 'AWAKEN',
 }
 
 /** States in which an incoming hit can be substituted out of. */
@@ -182,6 +188,7 @@ export enum InputFlag {
   CHARGE = 1 << 11,
   /** Call the support character (PL_ACT_SUP_ENTRY → combo join). */
   SUPPORT = 1 << 12,
+  ULTIMATE = 1 << 13,
 }
 
 export interface InputFrame {
@@ -270,7 +277,7 @@ export interface MoveDef {
   clip: string;
 }
 
-export type ComboBranch = 'NEUTRAL' | 'UP' | 'DOWN';
+export type ComboBranch = 'NEUTRAL' | 'UP' | 'DOWN' | 'AIR';
 
 export interface ComboStringDef {
   branch: ComboBranch;
@@ -308,12 +315,19 @@ export interface CharacterDef {
   vsFace?: string;
   /** Borrow another character's clip set (same CC2 body skeleton); tracks are retargeted by bone prefix. */
   animBank?: string;
+  /** Aerial string (○ while airborne); the last hit spikes the enemy down. */
+  airString?: ComboStringDef;
+  /** Ultimate jutsu (SPSKILL): name, clip prefix (spl1) and sound cue. */
+  ultimateName?: string;
+  ultimateClip?: string;
+  jutsuSfx?: string;
+  ultimateSfx?: string;
 }
 
 // ---------------------------------------------------------------------------
 // Events emitted by the collision pass
 // ---------------------------------------------------------------------------
-export type CombatEventKind = 'HIT' | 'GUARD_HIT' | 'CLASH' | 'PARRY' | 'GUARD_BREAK' | 'ARMOR' | 'SUB' | 'WALL_SPLAT' | 'SWITCH' | 'SPARK';
+export type CombatEventKind = 'HIT' | 'GUARD_HIT' | 'CLASH' | 'PARRY' | 'GUARD_BREAK' | 'ARMOR' | 'SUB' | 'WALL_SPLAT' | 'SWITCH' | 'SPARK' | 'ULTIMATE' | 'AWAKEN' | 'SFX';
 
 export interface CombatEvent {
   kind: CombatEventKind;

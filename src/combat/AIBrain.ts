@@ -91,6 +91,23 @@ export class AIBrain {
       }
       case 'APPROACH': {
         this.source.releaseAll();
+        // Ultimate when the gauge is full and the enemy is in range; awakening when hurt (hold chakra).
+        if (f.stats.chakra >= 90 && dist < 9 && this.tapTimer <= 0 && this.rng() < 0.04 && (f.state === CombatState.IDLE_NEUTRAL || f.state === CombatState.RUNNING)) {
+          this.tap(InputFlag.ULTIMATE);
+          this.tapTimer = 2.0;
+          break;
+        }
+        if (!f.awakened && f.stats.health <= f.stats.healthMax * 0.5 && dist > 6 && this.chargeHold <= 0 && this.rng() < 0.02) {
+          this.source.press(InputFlag.CHARGE);
+          this.chargeHold = 1.1;
+        }
+        if (this.chargeHold > 0) {
+          this.chargeHold -= dt;
+          this.source.moveX = 0; this.source.moveY = 0;
+          this.source.press(InputFlag.CHARGE);
+          if (this.chargeHold <= 0) this.source.release(InputFlag.CHARGE);
+          break;
+        }
         if (dist > 2.5) {
           this.source.moveX = towardX;
           this.source.moveY = towardY;
@@ -157,6 +174,17 @@ export class AIBrain {
       }
       case 'COMBO': {
         this.source.release(InputFlag.GUARD);
+        // Air string: when already airborne near the enemy, keep swinging; occasionally jump in.
+        if (!f.grounded && dist < 3.5 && this.tapTimer <= 0) {
+          this.tap(InputFlag.ATTACK);
+          this.tapTimer = 0.14;
+          break;
+        }
+        if (f.grounded && dist < 3 && t.position.y > 1.2 && this.tapTimer <= 0 && this.rng() < 0.3) {
+          this.tap(InputFlag.JUMP);
+          this.tapTimer = 0.25;
+          break;
+        }
         if (dist > 2.3 && f.state !== CombatState.COMBO_STRING) {
           this.source.moveX = towardX;
           this.source.moveY = towardY;

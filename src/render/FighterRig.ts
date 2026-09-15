@@ -29,6 +29,9 @@ export interface PoseContext {
   moveDir: HitDir;
   hitDir: HitDir;
   falling: boolean;
+  airDash?: boolean;
+  jumpCount?: number;
+  awakened?: boolean;
   framesLeft: number;
 }
 
@@ -73,7 +76,7 @@ export class FighterRig {
   private clips = new Map<string, THREE.AnimationClip>();
   private activeAction: THREE.AnimationAction | null = null;
   private activeSpec: ClipSpec | null = null;
-  private activeState: CombatState | null = null;
+  private activeState: string | null = null;
   private boneNames = new Set<string>();
   private time = 0;
   private parts: Record<string, THREE.Object3D> = {};
@@ -335,6 +338,7 @@ export class FighterRig {
           const dot = t.name.lastIndexOf('.');
           const node = t.name.slice(0, dot);
           const prop = t.name.slice(dot + 1);
+          if (prop === 'scale' && rootNames.has(node)) return false;
           return !(prop === 'position' && rootNames.has(node));
         });
         this.clips.set(c.name, c);
@@ -355,7 +359,7 @@ export class FighterRig {
             const node = t.name.slice(0, dot).replace(new RegExp(`^${from}00t0`), `${code}00t0`);
             const prop = t.name.slice(dot + 1);
             if (!this.boneNames.has(node)) continue;
-            if (prop === 'position' && (/trall$/i.test(node) || /^\w{4}00t0$/i.test(node))) continue;
+            if ((prop === 'position' || prop === 'scale') && (/trall$/i.test(node) || /^\w{4}00t0$/i.test(node))) continue;
             const nt = t.clone();
             nt.name = `${node}.${prop}`;
             tracks.push(nt);
@@ -407,6 +411,20 @@ export class FighterRig {
     this.poseMannequin(ctx);
   }
 
+  private awakenedVisual = false;
+  /** Awakening look: hot rim light on every cel material (restored when it ends). */
+  setAwakened(on: boolean, color = 0xff7a1a): void {
+    if (this.awakenedVisual === on) return;
+    this.awakenedVisual = on;
+    this.root.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.ShaderMaterial | undefined;
+      if (!m || !(m as THREE.ShaderMaterial).uniforms) return;
+      const u = (m as THREE.ShaderMaterial).uniforms;
+      if (u.uRimColor) (u.uRimColor.value as THREE.Color).set(on ? color : 0xffffff);
+      if (u.uRimThreshold) u.uRimThreshold.value = on ? 0.45 : 0.7;
+    });
+  }
+
   /**
    * Advance the skeletal animation by render time. Kept separate from the fixed 60 Hz tick so the
    * mixer runs at the display's refresh rate (no 60 Hz stepping on 120/144 Hz monitors) and can be
@@ -432,6 +450,8 @@ export class FighterRig {
       moveDir: ctx.moveDir,
       hitDir: ctx.hitDir,
       airborne: !ctx.grounded,
+      airDash: ctx.airDash,
+      awakened: ctx.awakened,
       falling: ctx.falling,
       stateFrame: ctx.stateFrame,
       framesLeft: ctx.framesLeft,
@@ -461,7 +481,7 @@ export class FighterRig {
 
   private updateGlbAnimation(ctx: PoseContext, dt: number): void {
     // Re-pick on state change, on hit direction / fall changes, or when a one-shot finished and has a chain.
-    const stateKey = ctx.state;
+    const stateKey = `${ctx.state}|${ctx.moveClip ?? ''}|${ctx.jumpCount ?? 0}|${ctx.airDash ? 1 : 0}|${ctx.hitDir}|${ctx.falling ? 1 : 0}`;
     const spec = this.pickSpec(ctx);
     if (spec) {
       const changed = this.activeState !== stateKey || !this.activeSpec;

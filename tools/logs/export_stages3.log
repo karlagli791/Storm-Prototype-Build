@@ -1,0 +1,18 @@
+=== sd05b 04:08:28
+04:08:32 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+04:08:32 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+04:08:33 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_sd05b.glb 12839724 meshes 23
+12839724 public/assets/stage_sd05b.glb
+=== sd03b 04:08:33
+RuntimeError: Error: Python: Traceback (most recent call last):
+FileNotFoundError: [Errno 2] No such file or directory: 'raw/stage\\sd03b.xfbin'
+Error: Python: Traceback (most recent call last):
+FileNotFoundError: [Errno 2] No such file or directory: 'raw/stage\\sd03b.xfbin'
+=== sd10a 04:08:35
+04:08:42 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+04:08:42 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+04:08:42 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_sd10a.glb 12619476 meshes 80
+12619476 public/assets/stage_sd10a.glb
+=== DONE 04:08:42

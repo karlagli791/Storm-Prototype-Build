@@ -18,6 +18,7 @@ export interface KeyBinding {
   throw: string[];
   charge: string[];
   support: string[];
+  ultimate: string[];
   up: string[];
   down: string[];
   left: string[];
@@ -39,6 +40,7 @@ export const P1_BINDINGS: KeyBinding = {
   throw: ['KeyH'],
   charge: ['KeyN'],
   support: ['KeyY'],
+  ultimate: ['KeyM'],
 };
 
 /** Priority resolution: when multiple actions are buffered on the same frame, higher wins. */
@@ -165,8 +167,12 @@ export class KeyboardInputSource implements InputSource {
   /** Shared gamepad poller; polled once per sample. */
   readonly pad = new GamepadState();
 
+  /** Keys pressed since the last sample: a tap shorter than one sim step still registers. */
+  private latched = new Set<string>();
+
   constructor(private binding: KeyBinding, target: Window = window) {
     target.addEventListener('keydown', (e) => {
+      if (!this.down.has(e.code)) this.latched.add(e.code);
       this.down.add(e.code);
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
     });
@@ -175,7 +181,7 @@ export class KeyboardInputSource implements InputSource {
   }
 
   private any(codes: string[]): boolean {
-    for (const c of codes) if (this.down.has(c)) return true;
+    for (const c of codes) if (this.down.has(c) || this.latched.has(c)) return true;
     return false;
   }
 
@@ -192,11 +198,14 @@ export class KeyboardInputSource implements InputSource {
     if (this.any(b.throw)) held |= InputFlag.THROW;
     if (this.any(b.charge)) held |= InputFlag.CHARGE;
     if (this.any(b.support)) held |= InputFlag.SUPPORT;
+    if (this.any(b.ultimate)) held |= InputFlag.ULTIMATE;
     if (this.any(b.up)) held |= InputFlag.UP;
     if (this.any(b.down)) held |= InputFlag.DOWN;
 
     let mx = (this.any(b.right) ? 1 : 0) - (this.any(b.left) ? 1 : 0);
     let my = (this.any(b.up) ? 1 : 0) - (this.any(b.down) ? 1 : 0);
+
+    this.latched.clear();
 
     // Gamepad overlay — Storm-style layout on the standard mapping (PS5 DualSense / Xbox)
     const gp = this.pad.poll();
