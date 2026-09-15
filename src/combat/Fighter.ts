@@ -42,6 +42,8 @@ export class Fighter {
   awakenTimer = 0;
   ultimatePhase = 0;
   ultimateLanded = false;
+  /** Cinematic finisher clip in progress (camera path + held victim). */
+  cinematic = false;
 
   state: CombatState = CombatState.IDLE_NEUTRAL;
   prevState: CombatState = CombatState.IDLE_NEUTRAL;

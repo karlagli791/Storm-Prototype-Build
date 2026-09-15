@@ -1,0 +1,6 @@
+=== 2ssk
+CAMERA 2sskspl1_atk 152 frames first [-4.1924, 1.7228, 20.3004] fov 65.0
+CAMERA 2sskspl1_cut 47 frames first [0.2232, 2.084, 0.4331] fov 65.0
+WROTE public/assets/ult/2ssk.json ['2sskspl1_atk', '2sskspl1_cut']
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+=== DONE

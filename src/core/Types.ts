@@ -322,6 +322,21 @@ export interface CharacterDef {
   ultimateClip?: string;
   jutsuSfx?: string;
   ultimateSfx?: string;
+  /** Ranged jutsu: the skill launches a projectile instead of a palm hitbox. */
+  jutsuProjectile?: JutsuProjectile;
+}
+
+export interface JutsuProjectile {
+  color: number;
+  sprite?: string;
+  speed: number;
+  damage: number;
+  radius: number;
+  /** Travel height above the ground (sand waves hug the floor, fireballs fly chest-high). */
+  height: number;
+  launchSfx?: string;
+  hitSfx?: string;
+  life?: number;
 }
 
 // ---------------------------------------------------------------------------

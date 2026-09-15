@@ -1,0 +1,32 @@
+=== 2nrt
+CAMERA 2nrtspl1_atk 147 frames first [-0.0, 1.1827, 1.1411] fov 45.0
+CAMERA 2nrtspl1_cut 47 frames first [-0.0, 1.2087, 0.7646] fov 45.0
+WROTE public/assets/ult/2nrt.json ['2nrtspl1_atk', '2nrtspl1_cut']
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+=== 2ssk
+NO CAMERA/ARMATURE ['2sskspl1_atk_cam', '2sskspl1_cut_cam']
+=== 2kks
+CAMERA 2kksspl1_atk 102 frames first [-0.0, 0.6, -9.0] fov 45.0
+WROTE public/assets/ult/2kks.json ['2kksspl1_atk']
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+=== 2fou
+CAMERA 2fouspl1_atk 192 frames first [-0.2687, 0.6194, -13.1129] fov 45.0
+CAMERA 2fouspl1_cut 47 frames first [-0.0435, 1.2692, 1.1373] fov 45.0
+WROTE public/assets/ult/2fou.json ['2fouspl1_atk', '2fouspl1_cut']
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+=== 2gar
+CAMERA 2garspl1_cut 47 frames first [-0.032, 2.0319, 1.5061] fov 45.0
+WROTE public/assets/ult/2gar.json ['2garspl1_cut']
+=== 2itc
+CAMERA 2itcspl1_atk 152 frames first [-1.6758, 1.351, -5.959] fov 45.0
+CAMERA 2itcspl1_cut 47 frames first [-0.0078, 1.5886, -1.6424] fov 30.0
+WROTE public/assets/ult/2itc.json ['2itcspl1_atk', '2itcspl1_cut']
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+=== 2ddr
+CAMERA 2ddrspl1_atk 152 frames first [0.0218, 2.057, 1.7132] fov 65.0
+CAMERA 2ddrspl1_cut 47 frames first [0.1622, 0.8823, 0.8663] fov 65.0
+WROTE public/assets/ult/2ddr.json ['2ddrspl1_atk', '2ddrspl1_cut']
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+=== 3mfn
+NO CAMERA/ARMATURE ['camera001']
+=== DONE

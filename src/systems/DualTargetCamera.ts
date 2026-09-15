@@ -14,6 +14,7 @@
 import * as THREE from 'three';
 import { ARENA_RADIUS, clamp } from '../core/Types';
 
+
 /**
  * Blueprint constants, nudged toward the framing observed in the Storm 2 prototype (Xenia
  * session, docs/proto/05): the retail camera sits lower and closer at neutral range so the
@@ -32,17 +33,17 @@ export const CAMERA_PARAMS = {
   LOOK_LAMBDA: 14.0,
   // Storm behind-the-shoulder framing: the camera sits behind and slightly beside the player,
   // pulls back as the fighters separate, and looks at a point weighted toward the enemy.
-  BACK_MIN: 3.4,
-  BACK_K: 0.28,
-  BACK_MAX: 9.0,
-  SIDE: 1.35,
-  UP_MIN: 1.75,
-  UP_K: 0.12,
-  UP_MAX: 3.6,
-  LOOK_MIX: 0.38,
-  LOOK_UP: 1.05,
-  FOV_MIN: 44,
-  FOV_MAX: 60,
+  BACK_MIN: 2.6,
+  BACK_K: 0.2,
+  BACK_MAX: 7.0,
+  SIDE: 1.15,
+  UP_MIN: 1.45,
+  UP_K: 0.09,
+  UP_MAX: 3.0,
+  LOOK_MIX: 0.34,
+  LOOK_UP: 1.0,
+  FOV_MIN: 42,
+  FOV_MAX: 56,
 };
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -56,6 +57,9 @@ export class DualTargetCamera {
   /** Which side the camera prefers: +1 keeps P1 on the left, -1 flips. Hysteresis avoids flip-flopping. */
   private side = 1;
   private sideLockTimer = 0;
+
+  /** Playable radius of the current stage (set by the game after a stage loads). */
+  arenaRadius = ARENA_RADIUS;
 
   /** Screen shake state. */
   private shakeAmp = 0;
@@ -80,6 +84,18 @@ export class DualTargetCamera {
 
   addShake(amp: number): void {
     this.shakeAmp = Math.max(this.shakeAmp, amp);
+  }
+
+  /** Cinematic override: place the camera directly and keep the smoothing state in sync so the
+   *  return to gameplay blends instead of popping. */
+  override(pos: THREE.Vector3, quat: THREE.Quaternion, fov: number): void {
+    this.position.copy(pos);
+    this.camera.position.copy(pos);
+    this.camera.quaternion.copy(quat);
+    this.tmp.set(0, 0, -1).applyQuaternion(quat);
+    this.lookAt.copy(pos).addScaledVector(this.tmp, 4);
+    if (Math.abs(this.camera.fov - fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); }
+    this.initialized = true;
   }
 
   /** Force the camera to snap to the target on the next update (used on round start / sub). */
@@ -116,7 +132,7 @@ export class DualTargetCamera {
 
     // Keep the camera inside the arena ceiling/walls with a soft margin so it never clips the cylinder.
     const rxz = Math.hypot(this.cTarget.x, this.cTarget.z);
-    const maxR = ARENA_RADIUS + 6.0;
+    const maxR = this.arenaRadius + 6.0;
     if (rxz > maxR) {
       this.cTarget.x *= maxR / rxz;
       this.cTarget.z *= maxR / rxz;

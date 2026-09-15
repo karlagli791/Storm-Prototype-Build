@@ -67,9 +67,11 @@ export function bindingFor(state: CombatState, ctx: ClipContext): StateBinding {
     case CombatState.JUMPING:
       if (ctx.airDash)
         return { act: 'PL_ACT_NMOVE_SIDE', anm: 'PL_ANM_DSH_' + ctx.moveDir, clips: [O(dirClip('{c}', ctx.moveDir, { F: 'dsf0', B: 'dsb0', L: 'dsl0', R: 'dsr0' })), L('{c}jmp1')] };
+      // jmp0 = take-off (one shot) → jmp1 = airborne loop. The common bank's fal0/fal1 are
+      // *damage* falls (arms flailing) and are only used by LAUNCHED.
       return ctx.falling
-        ? { act: 'PL_ACT_FALL', anm: 'PL_ANM_FALL0', clips: [L('1cmnfal0'), L('{c}jmp1'), L('{c}jmp0')] }
-        : { act: 'PL_ACT_JMP_V', anm: 'PL_ANM_JMP0', clips: [O('{c}jmp0', '1cmnfal0'), L('{c}jmp1')] };
+        ? { act: 'PL_ACT_FALL', anm: 'PL_ANM_FALL0', clips: [L('{c}jmp1'), L('{c}jmp0'), L('{c}nut0')] }
+        : { act: 'PL_ACT_JMP_V', anm: 'PL_ANM_JMP0', clips: [O('{c}jmp0', '{c}jmp1'), L('{c}jmp1')] };
     case CombatState.DASH_STARTUP:
     case CombatState.DASH_CHARGING:
       return { act: 'PL_ACT_NINJA_DASH', anm: 'PL_ANM_CHADASH_BEGIN', clips: [O('{c}dsh0s', '{c}dsh1l'), L('{c}dsf0')] };

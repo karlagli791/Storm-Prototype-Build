@@ -4,7 +4,7 @@
  * (the blueprint's "dash pierces standard shurikens"), despawn on the arena wall.
  */
 import * as THREE from 'three';
-import { ARENA_RADIUS, CombatState, HitPriority, HitReaction, HitboxDef } from '../core/Types';
+import { ARENA_RADIUS, CombatState, HitPriority, HitReaction, HitboxDef, JutsuProjectile } from '../core/Types';
 import { Fighter } from './Fighter';
 import { CombatStateMachine } from './CombatStateMachine';
 import { Effects } from '../render/Effects';
@@ -19,6 +19,9 @@ export interface Projectile {
   target: Fighter | null;
   life: number;
   damage: number;
+  /** Jutsu projectile spec (fireball etc.); undefined for shuriken. */
+  jutsu?: JutsuProjectile;
+  age?: number;
   /** Damage rate multiplier (support cover fire uses DAMAGERATE_SUPPORT_COVERING_FIRE). */
   rate: number;
   spin: number;
@@ -96,41 +99,75 @@ export class Projectiles {
     return p;
   }
 
+  /** Jutsu projectile (fireball / clay / sand): slow, big, tumbles the enemy, guardable. */
+  launch(owner: Fighter, target: Fighter | null, spec: JutsuProjectile): Projectile {
+    const start = new THREE.Vector3();
+    owner.rig.socketWorld(SOCKET.R_HAND, start);
+    if (!Number.isFinite(start.x)) start.copy(owner.position).setY(owner.position.y + 1.2);
+    start.y = owner.groundY + spec.height;
+    const dir = new THREE.Vector3();
+    if (target) dir.copy(target.position).setY(target.groundY + spec.height).sub(start);
+    else owner.forward(dir);
+    dir.normalize();
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(spec.radius * 0.6, 12, 8), new THREE.MeshBasicMaterial({ color: spec.color, transparent: true, opacity: 0.85 }));
+    mesh.position.copy(start);
+    this.group.add(mesh);
+    const p: Projectile = { mesh, pos: start.clone(), vel: dir.multiplyScalar(spec.speed), owner, target, life: spec.life ?? 2.2, damage: spec.damage, rate: 1, spin: 0, jutsu: spec, age: 0 };
+    this.list.push(p);
+    this.effects.flash('flare', start, 2.0, spec.color, 0.2);
+    return p;
+  }
+
   update(dt: number, fighters: Fighter[]): void {
     for (let i = this.list.length - 1; i >= 0; i--) {
       const p = this.list[i];
       p.life -= dt;
       p.pos.addScaledVector(p.vel, dt);
       p.mesh.position.copy(p.pos);
-      p.mesh.rotation.y += p.spin * dt;
-      p.mesh.lookAt(this.tmp.copy(p.pos).add(p.vel));
-      p.mesh.rotateX(Math.PI / 2);
-      let dead = p.life <= 0 || p.pos.y < -0.2 || Math.hypot(p.pos.x, p.pos.z) > ARENA_RADIUS + 1;
+      if (!p.jutsu) {
+        p.mesh.rotation.y += p.spin * dt;
+        p.mesh.lookAt(this.tmp.copy(p.pos).add(p.vel));
+        p.mesh.rotateX(Math.PI / 2);
+      }
+      p.age = (p.age ?? 0) + dt;
+      if (p.jutsu && p.age % 0.05 < dt) this.effects.spriteBurst(p.jutsu.sprite ?? 'flame', p.pos, { color: p.jutsu.color, count: 2, size: p.jutsu.radius * 1.6, life: 0.25, speed: 0.8, additive: true, spin: 8, spread: p.jutsu.radius * 0.4 });
+      let dead = p.life <= 0 || p.pos.y < -0.5 || Math.hypot(p.pos.x, p.pos.z) > ARENA_RADIUS * 2;
       if (!dead) {
         for (const f of fighters) {
           if (f.team === p.owner.team || !f.isLeader) continue;
           if (f.invulnFrames > 0 || f.state === CombatState.DEAD || f.state === CombatState.SUBSTITUTED) continue;
           // Chakra dashes pierce shurikens; jutsu armor too
-          if (DASH_STATES.has(f.state) || f.armorActive()) continue;
+          if (!p.jutsu && (DASH_STATES.has(f.state) || f.armorActive())) continue;
           this.tmp.copy(f.position);
           this.tmp.y += 1.0;
-          if (this.tmp.distanceTo(p.pos) < 0.75) {
-            const hb: HitboxDef = {
-              id: 'shuriken',
-              socket: SOCKET.CHEST,
-              radius: 0.3,
-              damage: Math.round(p.damage * p.rate),
-              chakraGain: 1,
-              reaction: HitReaction.STAGGER,
-              knockback: 2.0,
-              launch: 0,
-              hitstunFrames: BALANCE.PRJ_HITSTUN,
-              blockstunFrames: 6,
-              guardDamage: 3,
-              priority: HitPriority.NONE,
-              activeStart: 0,
-              activeEnd: 0,
-            };
+          if (this.tmp.distanceTo(p.pos) < (p.jutsu ? p.jutsu.radius + 0.6 : 0.75)) {
+            const hb: HitboxDef = p.jutsu
+              ? {
+                  id: 'jutsu_prj', socket: SOCKET.CHEST, radius: p.jutsu.radius, damage: Math.round(p.damage * p.rate), chakraGain: 0,
+                  reaction: HitReaction.TUMBLE, knockback: 18, launch: 5, hitstunFrames: 50, blockstunFrames: 20, guardDamage: 35,
+                  priority: HitPriority.ARMORED_JUTSU, activeStart: 0, activeEnd: 0,
+                }
+              : {
+                  id: 'shuriken',
+                  socket: SOCKET.CHEST,
+                  radius: 0.3,
+                  damage: Math.round(p.damage * p.rate),
+                  chakraGain: 1,
+                  reaction: HitReaction.STAGGER,
+                  knockback: 2.0,
+                  launch: 0,
+                  hitstunFrames: BALANCE.PRJ_HITSTUN,
+                  blockstunFrames: 6,
+                  guardDamage: 3,
+                  priority: HitPriority.NONE,
+                  activeStart: 0,
+                  activeEnd: 0,
+                };
+            if (p.jutsu) {
+              this.effects.clashBurst(p.pos);
+              this.effects.spriteBurst(p.jutsu.sprite ?? 'flame', p.pos, { color: p.jutsu.color, count: 10, size: p.jutsu.radius * 2, life: 0.45, speed: 5, additive: true, spin: 6, gravity: -4 });
+              this.fsm.events.emit('SFX', { attackerId: p.owner.id, defenderId: f.id, damage: 0, text: p.jutsu.hitSfx ?? 'exp1' });
+            }
             const guarding = f.state === CombatState.GUARDING || f.state === CombatState.BLOCKSTUN || f.state === CombatState.GUARD_COUNTER;
             if (f.parryActive) this.fsm.applyParry(f, p.owner, this.tmp.clone());
             else if (guarding) this.fsm.applyGuardHit(f, p.owner, hb, this.tmp.clone());

@@ -9,7 +9,7 @@
  * Mifune's icon is from Storm 3; Indra (a Storm Connections rip) borrows Sasuke's moveset via
  * `animBank` and has its portraits rendered from the model (tools/scripts/render_portraits.py).
  */
-import { CharacterDef, ComboStringDef, HitPriority, HitReaction, HitboxDef, MoveDef, SupportType } from '../core/Types';
+import { CharacterDef, ComboStringDef, HitPriority, HitReaction, HitboxDef, JutsuProjectile, MoveDef, SupportType } from '../core/Types';
 import { NARUTO_DEF, SASUKE_DEF, SOCKET } from './CharacterDefs';
 
 interface TemplateOpts {
@@ -35,6 +35,7 @@ interface TemplateOpts {
   ultimateName?: string;
   jutsuSfx?: string;
   ultimateSfx?: string;
+  projectile?: JutsuProjectile;
 }
 
 function hb(p: Partial<HitboxDef> & Pick<HitboxDef, 'id' | 'socket' | 'activeStart' | 'activeEnd'>): HitboxDef {
@@ -129,6 +130,7 @@ export function makeTemplateDef(o: TemplateOpts): CharacterDef {
     ultimateClip: `${bank}spl1_s`,
     jutsuSfx: o.jutsuSfx,
     ultimateSfx: o.ultimateSfx,
+    jutsuProjectile: o.projectile,
     hurtboxes: [
       { socket: SOCKET.CHEST, radius: 0.55 },
       { socket: SOCKET.HEAD, radius: 0.35 },
@@ -148,7 +150,8 @@ export function makeTemplateDef(o: TemplateOpts): CharacterDef {
 export const DEIDARA_DEF = makeTemplateDef({
   code: '2ddr', displayName: 'DEIDARA', title: 'Akatsuki · Explosion Release', jutsuName: 'C1: Explosive Clay',
   supportType: 'BALANCE', color: 0xf2d24a, runSpeed: 9.0, jutsuRange: 12, jutsuArmored: false,
-  ultimateName: 'C2: Dragon', jutsuSfx: 'exp1', ultimateSfx: 'exp2',
+  ultimateName: 'C2: Dragon', jutsuSfx: 'senko', ultimateSfx: 'exp2',
+  projectile: { color: 0xf4f0d8, sprite: 'magic', speed: 17, damage: 190, radius: 0.8, height: 1.4, launchSfx: 'shuriken', hitSfx: 'exp2', life: 2.6 },
 });
 export const MIFUNE_DEF = makeTemplateDef({
   code: '3mfn', displayName: 'MIFUNE', title: 'Land of Iron · Samurai General', jutsuName: 'Iai: Lightning-Speed Slash',
@@ -159,11 +162,13 @@ export const ITACHI_DEF = makeTemplateDef({
   code: '2itc', displayName: 'ITACHI UCHIHA', title: 'Akatsuki · Sharingan', jutsuName: 'Fire Style: Great Fireball',
   supportType: 'ATTACK', color: 0x2a2a3a, runSpeed: 9.2, finisher: 'cma03', jutsuRange: 11,
   ultimateName: 'Amaterasu', jutsuSfx: 'goukakyu', ultimateSfx: 'exp2',
+  projectile: { color: 0xff7a1a, sprite: 'flame', speed: 20, damage: 210, radius: 1.1, height: 1.2, launchSfx: 'goukakyu', hitSfx: 'fireHit' },
 });
 export const GAARA_DEF = makeTemplateDef({
   code: '2gar', displayName: 'GAARA', title: 'Fifth Kazekage', jutsuName: 'Sand Coffin',
   supportType: 'GUARD', color: 0xb03a2e, runSpeed: 8.6, health: 1050, finisher: 'cma03', jutsuRange: 10,
   ultimateName: 'Sand Tsunami', jutsuSfx: 'gar_sand2', ultimateSfx: 'gar_sandHit',
+  projectile: { color: 0xd9c48a, sprite: 'dirt', speed: 14, damage: 200, radius: 1.3, height: 0.5, launchSfx: 'gar_sand2', hitSfx: 'gar_sandHit', life: 2.4 },
 });
 export const KAKASHI_DEF = makeTemplateDef({
   code: '2kks', displayName: 'KAKASHI HATAKE', title: 'Copy Ninja', jutsuName: 'Lightning Blade',

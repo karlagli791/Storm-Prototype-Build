@@ -26,7 +26,7 @@ export interface BoundaryResult {
 
 export class ArenaEnvironment {
   readonly group = new THREE.Group();
-  readonly radius = ARENA_RADIUS;
+  radius = ARENA_RADIUS;
   readonly ceiling = ARENA_CEILING;
   /** Procedural pieces, hidden when a real stage GLB is bound. */
   readonly proceduralFloor = new THREE.Group();
@@ -52,6 +52,7 @@ export class ArenaEnvironment {
    */
   /** Remove the bound stage (used when cycling stages) and show the procedural arena again. */
   unloadStage(): void {
+    this.radius = ARENA_RADIUS;
     if (this.stageRoot) {
       this.group.remove(this.stageRoot);
       this.stageRoot.traverse((o) => {
@@ -125,6 +126,13 @@ export class ArenaEnvironment {
         if (/flor|floor|ground|flo0/i.test(names) && !/river|water|hit_/i.test(names)) floorMeshes.push(m);
       });
       let floorY = 0;
+      // Playable radius: as much of the floor mesh as exists (capped), so the whole map is walkable.
+      if (floorMeshes.length) {
+        const fb = new THREE.Box3();
+        for (const m of floorMeshes) fb.expandByObject(m);
+        const ext = Math.min(fb.max.x, -fb.min.x, fb.max.z, -fb.min.z);
+        this.radius = Number.isFinite(ext) && ext > 10 ? Math.min(75, Math.max(ARENA_RADIUS, ext * 0.92)) : ARENA_RADIUS;
+      } else this.radius = ARENA_RADIUS;
       if (floorMeshes.length) {
         const ray = new THREE.Raycaster(new THREE.Vector3(0, 200, 0), new THREE.Vector3(0, -1, 0), 0, 400);
         const hits = ray.intersectObjects(floorMeshes, false);
@@ -187,6 +195,9 @@ export class ArenaEnvironment {
         if (blended) m.renderOrder = 1;
         mat.uniforms.uRimThreshold.value = 2.0;
         mat.uniforms.uSpecThreshold.value = 2.0;
+        // Stage lighting: a real sun term (shadow band at 62 %) instead of the flat look.
+        mat.uniforms.uLightColor.value = new THREE.Color(0.55, 0.53, 0.5);
+        mat.uniforms.uAmbient.value = new THREE.Color(0.62, 0.63, 0.66);
         // CC2 stages layer "light" (sun dapple) and "shadow" planes over the ground; they are
         // additive / multiplicative FX sheets, not opaque geometry.
         const texName = (map?.name ?? '') + ' ' + m.name + ' ' + (src?.name ?? '');

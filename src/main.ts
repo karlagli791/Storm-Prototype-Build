@@ -54,6 +54,13 @@ class Game implements EventSink {
   projectiles: Projectiles;
   support: SupportSystem;
   audio = new AudioManager();
+  /** Exported Storm 4 ultimate camera paths, per clip name (assets/ult/<code>.json). */
+  private ultCams = new Map<string, { frames: { p: number[]; q: number[]; fov: number }[] }>();
+  private ultCamLoads = new Set<string>();
+  private letterbox: HTMLDivElement | null = null;
+  private camQ = new THREE.Quaternion();
+  private camP = new THREE.Vector3();
+  private camGQ = new THREE.Quaternion();
   private prevStates = new Map<number, CombatState>();
   stageIndex = 0;
   stageLoading = false;
@@ -103,6 +110,7 @@ class Game implements EventSink {
     this.projectiles = new Projectiles(this.fsm, this.effects);
     this.scene.add(this.projectiles.group);
     this.support = new SupportSystem(this.fsm, this.projectiles, this.effects, this);
+    this.fsm.projectiles = this.projectiles;
 
     // CC2 celshade ramp (system/celshade.tex, row 8 = three-band character ramp)
     new THREE.TextureLoader().load('assets/ui/celshade_ramp.png', (tex) => {
@@ -245,6 +253,7 @@ class Game implements EventSink {
     this.log(ok ? `stage bound: ${st.id} ${st.name}` : `stage ${st.id} missing, procedural arena`);
     this.hud.showToast(st.name, '#ffffff', 1.4);
     this.stageLoading = false;
+    this.camera.arenaRadius = this.arena.radius;
   }
 
   private relinkTargets(): void {
@@ -332,6 +341,56 @@ class Game implements EventSink {
         } else this.audio.play('awake_off', { volume: 0.6 });
         break;
       }
+    }
+  }
+
+  private loadUltCams(): void {
+    for (const f of this.allFighters) {
+      const bank = f.def.animBank ?? f.def.code;
+      if (this.ultCamLoads.has(bank)) continue;
+      this.ultCamLoads.add(bank);
+      fetch(`assets/ult/${bank}.json`).then((r) => (r.ok ? r.json() : null)).then((j) => {
+        if (!j) return;
+        for (const [clip, data] of Object.entries(j as Record<string, { frames: { p: number[]; q: number[]; fov: number }[] }>)) {
+          // Indra borrows Sasuke's clips under his own code
+          this.ultCams.set(clip, data);
+          if (bank !== f.def.code) this.ultCams.set(clip.replace(bank, f.def.code), data);
+        }
+      }).catch(() => {});
+    }
+  }
+
+  /** While a cinematic finisher plays, drive the camera from the exported path (30 fps data). */
+  private applyCinematicCamera(): boolean {
+    const f = [this.team1.active, this.team2.active].find((x) => x.state === CombatState.ULTIMATE && x.cinematic && x.currentMove);
+    if (!f) { this.setLetterbox(false); return false; }
+    const data = this.ultCams.get(f.currentMove!.clip);
+    const glb = f.rig.glbRoot;
+    if (!data || !glb || !data.frames.length) { this.setLetterbox(false); return false; }
+    const idx = Math.min(data.frames.length - 1, Math.floor(f.moveFrame / 2));
+    const k = data.frames[idx];
+    glb.updateWorldMatrix(true, false);
+    this.camP.set(k.p[0], k.p[1], k.p[2]).applyMatrix4(glb.matrixWorld);
+    glb.getWorldQuaternion(this.camGQ);
+    this.camQ.set(k.q[0], k.q[1], k.q[2], k.q[3]).premultiply(this.camGQ);
+    this.camera.override(this.camP, this.camQ, k.fov);
+    this.setLetterbox(true);
+    return true;
+  }
+
+  private setLetterbox(on: boolean): void {
+    const hud = document.getElementById('hud');
+    if (on && !this.letterbox) {
+      const el = document.createElement('div');
+      el.style.cssText = 'position:absolute;inset:0;z-index:16;pointer-events:none;';
+      el.innerHTML = '<div style="position:absolute;left:0;right:0;top:0;height:11vh;background:#000"></div><div style="position:absolute;left:0;right:0;bottom:0;height:11vh;background:#000"></div>';
+      document.body.appendChild(el);
+      this.letterbox = el;
+      if (hud) hud.style.opacity = '0';
+    } else if (!on && this.letterbox) {
+      this.letterbox.remove();
+      this.letterbox = null;
+      if (hud) hud.style.opacity = '1';
     }
   }
 
@@ -476,6 +535,7 @@ class Game implements EventSink {
       }
     }
 
+    this.loadUltCams();
     // Render interpolation: the sim runs at a fixed 60 Hz, the display may not. Place every rig
     // between its previous and current tick transform by the accumulator fraction so motion is
     // smooth at any refresh rate, and advance skeletal animation by render time (frozen in hitstop).
@@ -486,10 +546,11 @@ class Game implements EventSink {
       let dy = f.yaw - f.prevYaw;
       dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       f.rig.root.rotation.y = f.prevYaw + dy * alpha;
+      f.rig.updateShadow(f.rig.root.position.y - f.groundY);
       if (!this.paused) f.rig.advance(dt);
     }
     this.effects.update(dt);
-    this.camera.update(this.team1.active.rig.root.position, this.team2.active.rig.root.position, dt);
+    if (!this.applyCinematicCamera()) this.camera.update(this.team1.active.rig.root.position, this.team2.active.rig.root.position, dt);
     if (background) return;
     this.renderer.render(this.scene, this.camera.camera);
     this.hud.draw(this.hudData(), dt);

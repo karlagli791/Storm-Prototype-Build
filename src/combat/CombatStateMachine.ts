@@ -84,11 +84,14 @@ export class CombatStateMachine {
   private tmpC = new THREE.Vector3();
   private moveDir = new THREE.Vector3();
 
-  constructor(private events: EventSink, private effects: Effects) {}
+  constructor(readonly events: EventSink, private effects: Effects) {}
 
   // =========================================================================
   // Per-tick update
   // =========================================================================
+  /** Set by the game so jutsu can launch projectiles. */
+  projectiles: import('./Projectiles').Projectiles | null = null;
+
   update(f: Fighter, dt: number, cam: CameraBasis): void {
     if (f.awakened) {
       f.awakenTimer -= dt;
@@ -460,13 +463,18 @@ export class CombatStateMachine {
       }
     }
     if (f.stateFrame >= NINJA_MOVE_FRAMES && f.grounded) {
-      if (mag > 0.15 && buf.isHeld(InputFlag.JUMP)) {
-        // chained ninja moves while holding jump
+      // Chain only on a fresh press: a held jump button (pad) used to loop the hop forever and
+      // read as a "slide lock".
+      if (mag > 0.15 && buf.wasPressedWithin(InputFlag.JUMP, 6)) {
+        buf.consume(InputFlag.JUMP);
         f.enterState(CombatState.NINJA_MOVE);
         this.beginNinjaMove(f);
         return;
       }
       f.enterState(mag > 0.15 ? CombatState.RUNNING : CombatState.IDLE_NEUTRAL);
+    } else if (f.stateFrame >= NINJA_MOVE_FRAMES + 24) {
+      // Hopped off a ledge / slope: hand over to the jump state instead of hanging in the hop.
+      f.enterState(CombatState.JUMPING);
     }
   }
 
@@ -579,6 +587,7 @@ export class CombatStateMachine {
   }
 
   private startUltimate(f: Fighter): void {
+    f.cinematic = false;
     f.stats.chakra = 0;
     f.enterState(CombatState.ULTIMATE);
     f.beginMove(this.ultimateMove(f), 'NEUTRAL', 0);
@@ -608,15 +617,60 @@ export class CombatStateMachine {
     }
     const landed = f.landedHitIds.size > 0;
     if (landed && !f.ultimateLanded) {
-      // Finisher connected: long freeze, camera slam, the enemy is sent flying by the hitbox.
+      // Finisher connected. With a cinematic clip (spl1_atk + exported camera) the demo plays out
+      // with the victim held in frame; otherwise a long freeze and a camera slam.
       f.ultimateLanded = true;
       f.ultimatePhase = 2;
       f.velocity.set(0, 0, 0);
-      f.hitstopFrames = 22;
-      if (t) t.hitstopFrames = 22;
       const p = f.position.clone(); p.y += 1;
       this.effects.clashBurst(p);
-      this.events.emit('ULTIMATE', { attackerId: f.id, defenderId: t?.id ?? -1, damage: 380, text: `${f.def.displayName}: ${f.def.ultimateName ?? 'ULTIMATE'} HIT!`, color: 0xffffff, shake: 0.8 });
+      const atkClip = `${f.def.code}spl1_atk`;
+      if (t && f.rig.hasClip(atkClip)) {
+        const frames = Math.max(60, Math.round(f.rig.clipDuration(atkClip) * 60));
+        f.beginMove({ ...move, clip: atkClip, totalFrames: frames, hitboxes: [] }, 'NEUTRAL', 0);
+        f.moveFrame = 0;
+        f.cinematic = true;
+        f.hitstopFrames = 0;
+        // Hold the victim at the demo's contact spot, facing the attacker, frozen in the hit pose.
+        f.forward(this.tmpA);
+        t.position.copy(f.position).addScaledVector(this.tmpA, 1.7);
+        t.position.y = t.groundY;
+        t.velocity.set(0, 0, 0);
+        t.yaw = Math.atan2(-this.tmpA.x, -this.tmpA.z);
+        t.enterState(CombatState.HITSTUN);
+        t.stunFrames = frames + 10;
+        this.events.emit('ULTIMATE', { attackerId: f.id, defenderId: t.id, damage: 0, text: `${f.def.displayName}: ${f.def.ultimateName ?? 'ULTIMATE'} — demo`, color: 0xffffff });
+      } else {
+        f.hitstopFrames = 22;
+        if (t) t.hitstopFrames = 22;
+        this.events.emit('ULTIMATE', { attackerId: f.id, defenderId: t?.id ?? -1, damage: 380, text: `${f.def.displayName}: ${f.def.ultimateName ?? 'ULTIMATE'} HIT!`, color: 0xffffff, shake: 0.8 });
+      }
+      return;
+    }
+    if (f.cinematic) {
+      // Demo: attacker rooted, victim frozen and invulnerable, launched hard on the last frame.
+      f.velocity.set(0, 0, 0);
+      if (t) {
+        t.hitstopFrames = Math.max(t.hitstopFrames, 2);
+        t.invulnFrames = 2;
+        t.velocity.set(0, 0, 0);
+        t.flashTimer = 0; // hitstop skips the tick that fades the hit flash
+      }
+      if (f.moveFrame >= move.totalFrames) {
+        f.cinematic = false;
+        if (t) {
+          f.forward(this.tmpA);
+          t.hitstopFrames = 0;
+          t.velocity.set(this.tmpA.x * 26, 9, this.tmpA.z * 26);
+          t.grounded = false;
+          t.stunFrames = 60;
+          t.lastHitBy = f.id;
+          t.enterState(CombatState.TUMBLE);
+          t.bounceOnLand = true;
+        }
+        this.events.emit('ULTIMATE', { attackerId: f.id, defenderId: t?.id ?? -1, damage: 380, text: `${f.def.displayName}: ${f.def.ultimateName ?? 'ULTIMATE'} FINISH!`, color: 0xffffff, shake: 0.9 });
+        f.enterState(CombatState.IDLE_NEUTRAL);
+      }
       return;
     }
     if (!f.ultimateLanded) {
@@ -865,6 +919,20 @@ export class CombatStateMachine {
       f.velocity.z = this.tmpA.z * move.forwardStep;
     } else {
       this.applyFriction(f, dt, 80);
+    }
+    // Projectile jutsu (fireball / clay / sand): launch once at the active frame, no palm hitbox.
+    const pj = f.def.jutsuProjectile;
+    if (pj && this.projectiles) {
+      if (f.moveFrame === hb.activeStart) {
+        this.projectiles.launch(f, f.target, pj);
+        this.events.emit('SFX', { attackerId: f.id, defenderId: -1, damage: 0, text: pj.launchSfx ?? 'goukakyu' });
+      }
+      if (f.moveFrame >= hb.activeStart - 10 && f.moveFrame <= hb.activeStart) {
+        f.rig.socketWorld(hb.socket, this.tmpB);
+        this.effects.spriteBurst(pj.sprite ?? 'flame', this.tmpB, { color: pj.color, count: 2, size: 0.6, life: 0.2, speed: 1, additive: true, spin: 6 });
+      }
+      if (f.moveFrame >= move.totalFrames) f.enterState(CombatState.IDLE_NEUTRAL);
+      return;
     }
     // Jutsu VFX on the bound dummy socket
     if (f.moveFrame >= hb.activeStart - 8 && f.moveFrame <= hb.activeEnd) {

@@ -71,7 +71,7 @@ export class FighterRig {
   readonly root = new THREE.Group();
   readonly sockets = new Map<string, THREE.Object3D>();
   readonly mannequin = new THREE.Group();
-  private glbRoot: THREE.Object3D | null = null;
+  glbRoot: THREE.Object3D | null = null;
   private mixer: THREE.AnimationMixer | null = null;
   private clips = new Map<string, THREE.AnimationClip>();
   private activeAction: THREE.AnimationAction | null = null;
@@ -86,6 +86,11 @@ export class FighterRig {
   constructor(private def: CharacterDef) {
     this.buildMannequin();
     this.root.add(this.mannequin);
+    this.shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.2), new THREE.MeshBasicMaterial({ map: FighterRig.makeShadowTex(), transparent: true, depthWrite: false, opacity: 0.9 }));
+    this.shadow.rotation.x = -Math.PI / 2;
+    this.shadow.position.y = 0.02;
+    this.shadow.renderOrder = 3;
+    this.root.add(this.shadow);
   }
 
   // ------------------------------------------------------------ procedural rig
@@ -334,11 +339,15 @@ export class FighterRig {
         if ((o as THREE.Bone).isBone && (/trall$/i.test(o.name) || /^\w{4}00t0$/i.test(o.name))) rootNames.add(o.name);
       });
       for (const c of gltf.animations) {
+        // Cinematic (spl1_*) clips keep their root motion: the exported camera path expects the
+        // body to travel exactly where the animation moves it.
+        const cinematic = /spl1_(atk|cut)/.test(c.name);
         c.tracks = c.tracks.filter((t) => {
           const dot = t.name.lastIndexOf('.');
           const node = t.name.slice(0, dot);
           const prop = t.name.slice(dot + 1);
           if (prop === 'scale' && rootNames.has(node)) return false;
+          if (cinematic) return true;
           return !(prop === 'position' && rootNames.has(node));
         });
         this.clips.set(c.name, c);
@@ -409,6 +418,37 @@ export class FighterRig {
       return;
     }
     this.poseMannequin(ctx);
+  }
+
+  /** Blob drop shadow that stays on the floor while the body is in the air. */
+  readonly shadow: THREE.Mesh;
+  private static shadowTex: THREE.Texture | null = null;
+  private static makeShadowTex(): THREE.Texture {
+    if (FighterRig.shadowTex) return FighterRig.shadowTex;
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d')!;
+    const grad = g.createRadialGradient(64, 64, 8, 64, 64, 62);
+    grad.addColorStop(0, 'rgba(0,0,0,0.55)');
+    grad.addColorStop(0.7, 'rgba(0,0,0,0.3)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 128, 128);
+    const t = new THREE.CanvasTexture(c);
+    FighterRig.shadowTex = t;
+    return t;
+  }
+
+  hasClip(name: string): boolean { return this.clips.has(name); }
+  clipDuration(name: string): number { return this.clips.get(name)?.duration ?? 0; }
+
+  /** Keep the shadow on the ground: `height` is the body's height above the floor. */
+  updateShadow(height: number): void {
+    const h = Math.max(0, height);
+    this.shadow.position.y = -h + 0.02;
+    const k = 1 - Math.min(0.55, h * 0.12);
+    this.shadow.scale.setScalar(k);
+    (this.shadow.material as THREE.MeshBasicMaterial).opacity = 0.9 * k;
   }
 
   private awakenedVisual = false;
