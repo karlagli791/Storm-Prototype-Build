@@ -205,3 +205,4 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 - 2026-09-15 03:22 — Desktop packaging: 256 px app icon, ignore build/ and release/
 - 2026-09-15 04:11 — Storm mechanics pass: double jump, air ninja move, air strings, ultimate jutsu with cut-in and spl1 clips, awakening, round intro, terrain following, behind-the-shoulder camera, Storm 2 SFX, sprite VFX, six more stages, animation and input fixes
 - 2026-09-15 04:13 — Version 0.3.0
+- 2026-09-15 04:44 — Playtest fixes: ninja-move chain lock, normal fall clips, closer camera, full-map traversal, drop shadows, terrain shading, projectile jutsu, ultimate cinematics from the Storm 4 camera paths
