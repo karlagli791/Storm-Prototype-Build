@@ -133,7 +133,7 @@ const DEBRIS: Record<ElementKind, { n: string; c: number; gravity: number; up: n
 };
 
 interface Live { obj: THREE.Object3D; t: number; life: number; tick: (k: number, dt: number) => void; dispose: () => void }
-interface Held { obj: THREE.Group; last: number; frame: number; tick: (dt: number, pos: THREE.Vector3) => void; dispose: () => void; pos: THREE.Vector3; mats: THREE.ShaderMaterial[] }
+interface Held { obj: THREE.Group; last: number; miss: number; frame: number; tick: (dt: number, pos: THREE.Vector3) => void; dispose: () => void; pos: THREE.Vector3; mats: THREE.ShaderMaterial[] }
 
 export class ElementFX {
   readonly group = new THREE.Group();
@@ -229,6 +229,7 @@ export class ElementFX {
     let h = this.held.get(key);
     if (!h) { h = this.buildHold(kind, color, scale); this.held.set(key, h); this.group.add(h.obj); }
     h.last = this.clock;
+    h.miss = 0;
     h.pos.copy(pos);
   }
 
@@ -261,7 +262,7 @@ export class ElementFX {
     }
     const pos = new THREE.Vector3();
     const h: Held = {
-      obj: g, last: this.clock, frame: 0, pos, mats,
+      obj: g, last: this.clock, miss: 0, frame: 0, pos, mats,
       tick: (dt, p) => {
         h.frame++;
         g.position.copy(p);
@@ -412,7 +413,10 @@ export class ElementFX {
       }
     }
     for (const [key, h] of this.held) {
-      if (this.clock - h.last > 0.12) {
+      // Fade only when the effect missed several updates *and* some time passed: a single long frame
+      // (slow machine, background tab) must not drop an effect that is still being refreshed.
+      h.miss++;
+      if (h.miss > 2 && this.clock - h.last > 0.1) {
         // no longer refreshed: fade the held effect out over 0.18 s
         this.held.delete(key);
         const g = h.obj;
