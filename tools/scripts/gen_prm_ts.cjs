@@ -9,17 +9,23 @@ const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..', '..');
 const codes = process.argv.slice(2);
-const KEEP = /^PL_ANM_(ATK|SKL01_ACT|SKL01_DEMO|PRJ_LAND|PRJ_AIR|SPSKILL_1_DEMO_ATK)/;
+const KEEP = /^PL_ANM_(ATK|SKL01_ACT|SKL01_DEMO|SKILL_1_DEMO|PRJ_LAND|PRJ_AIR|SPSKILL_1_DEMO|NUT|RUN1|JMP0|JMP1|DSH_)/;
 const out = {};
 for (const code of codes) {
-  const glb = fs.readFileSync(path.join(root, 'public/assets', `${code}.glb`));
-  const len = glb.readUInt32LE(12);
-  const j = JSON.parse(glb.slice(20, 20 + len).toString());
+  // Clip lengths from the character's GLB plus its awakened-form GLB (Naruto → 2nrv, Sasuke → 2ssv).
+  const AW = { '2nrt': '2nrv', '2ssk': '2ssv' };
   const clips = {};
-  for (const a of j.animations) {
-    let mx = 0;
-    for (const s of a.samplers) { const ac = j.accessors[s.input]; if (ac.max && ac.max[0] > mx) mx = ac.max[0]; }
-    clips[a.name] = Math.max(2, Math.round(mx * 60));
+  for (const g of [code, AW[code]].filter(Boolean)) {
+    const gp = path.join(root, 'public/assets', `${g}.glb`);
+    if (!fs.existsSync(gp)) continue;
+    const glb = fs.readFileSync(gp);
+    const len = glb.readUInt32LE(12);
+    const j = JSON.parse(glb.slice(20, 20 + len).toString());
+    for (const a of j.animations) {
+      let mx = 0;
+      for (const s of a.samplers) { const ac = j.accessors[s.input]; if (ac.max && ac.max[0] > mx) mx = ac.max[0]; }
+      clips[a.name] = Math.max(2, Math.round(mx * 60));
+    }
   }
   const prm = JSON.parse(fs.readFileSync(path.join(root, 'public/assets/prm', `${code}.json`), 'utf8'));
   const entries = [];

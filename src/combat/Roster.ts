@@ -111,9 +111,17 @@ function moveFromPrm(code: string, e: PrmEntry, blade: boolean, name: string, ex
 
 /** Strings derived from the table: ATK00-02 (+ the first SMASH finisher) = neutral, RISE entries = up,
  *  the tilt entries = down, ATK_AIR00.. = air. Returns null when the table has no usable ground string. */
-export function stringsFromPrm(code: string, blade: boolean): { neutral: ComboStringDef; up: ComboStringDef; down: ComboStringDef; air: ComboStringDef | null } | null {
-  const table = PRM[code];
-  if (!table) return null;
+export function stringsFromPrm(code: string, blade: boolean, clipPrefix?: string): { neutral: ComboStringDef; up: ComboStringDef; down: ComboStringDef; air: ComboStringDef | null } | null {
+  const raw = PRM[code];
+  if (!raw) return null;
+  // Base moveset = entries whose clip carries the character code without an awakening infix;
+  // an awakened moveset = entries whose clip starts with the awakening prefix (2nrvawa…, 2garaws…).
+  const table = { entries: raw.entries.filter((e) => (clipPrefix ? e.clip.startsWith(clipPrefix) : !/^.{4}aw[as]/.test(e.clip))) };
+  if (clipPrefix) {
+    // Awakening entries often carry the clip only; borrow the hit records of the base move with the same name.
+    const baseBy = new Map(raw.entries.filter((e) => !/^.{4}aw[as]/.test(e.clip)).map((e) => [e.anm, e]));
+    table.entries = table.entries.map((e) => (e.hits.length ? e : { ...e, hits: baseBy.get(e.anm)?.hits ?? [] }));
+  }
   const by = new Map(table.entries.map((e) => [e.anm, e]));
   const get = (n: string) => by.get(n);
   const mk = (n: string, e: PrmEntry | undefined) => (e ? moveFromPrm(code, e, blade, `${code}_${n}`) : null);
@@ -276,15 +284,46 @@ export const INDRA_DEF = makeTemplateDef({
   portrait: 'assets/ui/player_9ind.png', ultimateName: "Susano'o: Sword of Indra", jutsuSfx: 'adv_chidori', ultimateSfx: 'raikiriHit',
 });
 
+// --- Session 9 roster expansion (Storm 4 containers, Storm 2 select art) ---------------------
+export const PAIN_DEF = makeTemplateDef({ code: '2pea', displayName: 'PAIN', title: 'Akatsuki · Leader of the Rain', jutsuName: 'Almighty Push', supportType: 'BALANCE', color: 0xff8c3a, runSpeed: 9.0, health: 1000, jutsuRange: 12, ultimateName: 'Planetary Devastation', jutsuSfx: 'exp1', ultimateSfx: 'exp2' });
+export const JIRAIYA_DEF = makeTemplateDef({ code: '2jry', displayName: 'JIRAIYA', title: 'Toad Sage · Legendary Sannin', jutsuName: 'Rasengan', supportType: 'BALANCE', color: 0xd94b2b, runSpeed: 9.0, health: 1050, ultimateName: 'Toad Oil Flame Bomb', jutsuSfx: 'rasen', ultimateSfx: 'fireHit' });
+export const TSUNADE_DEF = makeTemplateDef({ code: '2tnd', displayName: 'TSUNADE', title: 'Fifth Hokage · Legendary Sannin', jutsuName: 'Heavenly Kick of Pain', supportType: 'ATTACK', color: 0xe8c48a, runSpeed: 9.2, health: 1100, ultimateName: 'Painful Sky Leg', jutsuSfx: 'groundHit2', ultimateSfx: 'exp2' });
+export const OROCHIMARU_DEF = makeTemplateDef({ code: '2orc', displayName: 'OROCHIMARU', title: 'Sound Village · Legendary Sannin', jutsuName: 'Striking Shadow Snakes', supportType: 'GUARD', color: 0x8a6ab0, runSpeed: 9.0, health: 1000, jutsuRange: 11, ultimateName: 'Eight Branches Technique', jutsuSfx: 'senko', ultimateSfx: 'exp2' });
+export const LEE_DEF = makeTemplateDef({ code: '2roc', displayName: 'ROCK LEE', title: 'Hidden Leaf · Taijutsu Specialist', jutsuName: 'Leaf Rising Wind', supportType: 'ATTACK', color: 0x3f9a3a, runSpeed: 10.4, health: 950, ultimateName: 'Hidden Lotus', jutsuSfx: 'punch_hit2', ultimateSfx: 'exp2' });
+export const NEJI_DEF = makeTemplateDef({ code: '2nej', displayName: 'NEJI HYUGA', title: 'Hidden Leaf · Byakugan', jutsuName: 'Eight Trigrams: Air Palm', supportType: 'GUARD', color: 0xd8d0b8, runSpeed: 9.6, health: 950, ultimateName: 'Eight Trigrams: Sixty-Four Palms', jutsuSfx: 'flash', ultimateSfx: 'exp2' });
+export const SAKURA_DEF = makeTemplateDef({ code: '2skr', displayName: 'SAKURA HARUNO', title: 'Hidden Leaf · Medical Ninja', jutsuName: 'Cherry Blossom Impact', supportType: 'ATTACK', color: 0xf08aa8, runSpeed: 9.4, health: 950, ultimateName: 'Ultimate Cherry Blossom Impact', jutsuSfx: 'groundHit2', ultimateSfx: 'exp2' });
+export const HINATA_DEF = makeTemplateDef({ code: '2hnt', displayName: 'HINATA HYUGA', title: 'Hidden Leaf · Byakugan', jutsuName: 'Eight Trigrams: Twin Lion Fists', supportType: 'GUARD', color: 0x7d8ad0, runSpeed: 9.4, health: 900, ultimateName: 'Eight Trigrams: Sixty-Four Palms', jutsuSfx: 'flash', ultimateSfx: 'exp2' });
+export const KISAME_DEF = makeTemplateDef({ code: '2ksm', displayName: 'KISAME HOSHIGAKI', title: 'Akatsuki · Monster of the Hidden Mist', jutsuName: 'Water Prison Shark Dance', supportType: 'BALANCE', color: 0x4c8ea0, runSpeed: 8.8, health: 1150, blade: true, ultimateName: 'Great Shark Bullet', jutsuSfx: 'senko', ultimateSfx: 'exp2' });
+export const HIDAN_DEF = makeTemplateDef({ code: '2hdn', displayName: 'HIDAN', title: 'Akatsuki · Jashin Worshipper', jutsuName: 'Curse Jutsu: Death Controlling', supportType: 'ATTACK', color: 0x9a9aa8, runSpeed: 9.0, health: 1100, blade: true, ultimateName: 'Jashin Ritual', jutsuSfx: 'sword_swing', ultimateSfx: 'sword_hit' });
+export const TOBI_DEF = makeTemplateDef({ code: '2tob', displayName: 'TOBI', title: 'Akatsuki · Masked Man', jutsuName: 'Fire Style: Blast Wave Wild Dance', supportType: 'BALANCE', color: 0xff8c1a, runSpeed: 9.2, health: 1000, jutsuRange: 11, ultimateName: 'Fire Style: Bomb Blast Dance', jutsuSfx: 'goukakyu', ultimateSfx: 'fireHit', projectile: { color: 0xff7a1a, sprite: 'flame', speed: 19, damage: 200, radius: 1.1, height: 1.2, launchSfx: 'goukakyu', hitSfx: 'fireHit' } });
+export const GUY_DEF = makeTemplateDef({ code: '2guy', displayName: 'MIGHT GUY', title: 'Hidden Leaf · Noble Blue Beast', jutsuName: 'Leaf Rising Wind', supportType: 'ATTACK', color: 0x3aa04a, runSpeed: 10.2, health: 1050, ultimateName: 'Morning Peacock', jutsuSfx: 'punch_hit2', ultimateSfx: 'exp2' });
+export const BEE_DEF = makeTemplateDef({ code: '2klb', displayName: 'KILLER BEE', title: 'Hidden Cloud · Eight-Tails Jinchuriki', jutsuName: 'Lariat', supportType: 'ATTACK', color: 0xf2c14a, runSpeed: 9.4, health: 1100, blade: true, ultimateName: 'Acrobat', jutsuSfx: 'punch_hit2', ultimateSfx: 'sword_hit' });
+export const KABUTO_DEF = makeTemplateDef({ code: '2kbt', displayName: 'KABUTO YAKUSHI', title: "Orochimaru's Right Hand", jutsuName: 'Chakra Scalpel', supportType: 'GUARD', color: 0xb0b0c8, runSpeed: 9.4, health: 950, ultimateName: 'Dead Soul Jutsu', jutsuSfx: 'flash', ultimateSfx: 'exp2' });
+export const SUIGETSU_DEF = makeTemplateDef({ code: '2sgt', displayName: 'SUIGETSU HOZUKI', title: 'Taka · Second Coming of the Demon', jutsuName: 'Water Style: Great Water Wave', supportType: 'BALANCE', color: 0x6ac8e8, runSpeed: 9.2, health: 1000, blade: true, ultimateName: 'Great Water Arm', jutsuSfx: 'senko', ultimateSfx: 'exp2' });
+
+/** Awakened form: a second body (`awCode`.glb, may equal the base) with the awakening moveset. */
+export function awakenedFor(def: CharacterDef, awCode: string, prefix: string, name: string): CharacterDef {
+  const st = stringsFromPrm(def.code, def.hasBlade, prefix);
+  const aw: CharacterDef = {
+    ...def, code: awCode, glbPath: `assets/${awCode}.glb`, voiceCode: def.voiceCode ?? def.code, awakenedDef: undefined, awakenedCode: undefined, animBank: undefined, awClipInfix: prefix.slice(4),
+    displayName: def.displayName, title: name,
+    neutralString: st?.neutral ?? def.neutralString, upString: st?.up ?? def.upString, downString: st?.down ?? def.downString, airString: st?.air ?? def.airString,
+  };
+  return aw;
+}
+function withAwakening(def: CharacterDef, awCode: string, prefix: string, name: string): CharacterDef {
+  return { ...def, awakenedCode: awCode, awakenedName: name, awakenedDef: awakenedFor(def, awCode, prefix, name) };
+}
+
 const art = (code: string) => ({ icon: `assets/ui/sel/icon_${code}.png`, stand: `assets/ui/sel/stand_${code}.png`, vsFace: `assets/ui/sel/vs_${code}.png` });
 const airFor = (code: string): ComboStringDef => makeTemplateDef({ code, displayName: code, title: '', jutsuName: '', supportType: 'BALANCE', color: 0xffffff }).airString!;
 const nrtPrm = stringsFromPrm('2nrt', false);
 const sskPrm = stringsFromPrm('2ssk', true);
-export const NARUTO_SEL: CharacterDef = { ...NARUTO_DEF, title: 'Hidden Leaf · Jinchuriki of the Nine-Tails', jutsuName: 'Rasengan', ...art('2nrt'), airString: nrtPrm?.air ?? airFor('2nrt'), ...(nrtPrm ? { neutralString: nrtPrm.neutral, upString: nrtPrm.up, downString: nrtPrm.down } : {}), ultimateName: 'Giant Rasengan', ultimateClip: '2nrtspl1_s', jutsuSfx: 'rasen', ultimateSfx: 'rasen2' };
-export const SASUKE_SEL: CharacterDef = { ...SASUKE_DEF, title: 'Taka · Sharingan', jutsuName: 'Chidori', ...art('2ssk'), airString: sskPrm?.air ?? airFor('2ssk'), ...(sskPrm ? { neutralString: sskPrm.neutral, upString: sskPrm.up, downString: sskPrm.down } : {}), ultimateName: 'Kirin', ultimateClip: '2sskspl1_s', jutsuSfx: 'adv_chidori', ultimateSfx: 'raikiriHit' };
+export const NARUTO_SEL: CharacterDef = { ...NARUTO_DEF, title: 'Hidden Leaf · Jinchuriki of the Nine-Tails', jutsuName: 'Rasengan', ...art('2nrt'), airString: nrtPrm?.air ?? airFor('2nrt'), ...(nrtPrm ? { neutralString: nrtPrm.neutral, upString: nrtPrm.up, downString: nrtPrm.down } : {}), ultimateName: 'Giant Rasengan', ultimateClip: '2nrtspl1_s', jutsuSfx: 'rasen', ultimateSfx: 'rasen2', awakenedCode: '2nrv', awakenedName: 'Nine-Tails Chakra' };
+export const SASUKE_SEL: CharacterDef = { ...SASUKE_DEF, title: 'Taka · Sharingan', jutsuName: 'Chidori', ...art('2ssk'), airString: sskPrm?.air ?? airFor('2ssk'), ...(sskPrm ? { neutralString: sskPrm.neutral, upString: sskPrm.up, downString: sskPrm.down } : {}), ultimateName: 'Kirin', ultimateClip: '2sskspl1_s', jutsuSfx: 'adv_chidori', ultimateSfx: 'raikiriHit', awakenedCode: '2ssv', awakenedName: 'Curse Mark' };
 
 /** Select-screen order (Storm 2 layout: heroes first, then the Shippuden roster). */
-export const ROSTER: CharacterDef[] = [NARUTO_SEL, SASUKE_SEL, KAKASHI_DEF, MINATO_DEF, GAARA_DEF, ITACHI_DEF, DEIDARA_DEF, MIFUNE_DEF, INDRA_DEF];
+export const ROSTER: CharacterDef[] = [withAwakening(NARUTO_SEL, '2nrv', '2nrvawa', 'Nine-Tails Chakra Mode'), withAwakening(SASUKE_SEL, '2ssv', '2ssvawa', 'Curse Mark: Second State'), SAKURA_DEF, KAKASHI_DEF, MINATO_DEF, JIRAIYA_DEF, TSUNADE_DEF, OROCHIMARU_DEF, GAARA_DEF, LEE_DEF, NEJI_DEF, HINATA_DEF, GUY_DEF, withAwakening(ITACHI_DEF, '2itc', '2itcaws', 'Susano\'o'), KISAME_DEF, DEIDARA_DEF, HIDAN_DEF, TOBI_DEF, PAIN_DEF, BEE_DEF, KABUTO_DEF, SUIGETSU_DEF, MIFUNE_DEF, INDRA_DEF];
 
 export function findCharacter(code: string | null | undefined): CharacterDef | undefined {
   return ROSTER.find((d) => d.code === code);

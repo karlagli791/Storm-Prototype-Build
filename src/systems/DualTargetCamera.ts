@@ -72,6 +72,8 @@ export class DualTargetCamera {
   arenaRadius = ARENA_RADIUS;
   /** 1 while P1 is chakra-dashing (set by the game). */
   dashTarget = 0;
+  /** Player option: scales the follow distance (0.7 close … 1.4 far). */
+  distanceScale = 1;
   private dashWeight = 0;
   /** Combo camera weight target (0 = normal orbit, 1 = side view), smoothed in update(). */
   comboTarget = 0;
@@ -142,8 +144,8 @@ export class DualTargetCamera {
 
     // Behind-the-shoulder: back along the P1→P2 axis, offset to P1's right so P1 reads on the
     // left of the frame, height rising with distance; look between the two, biased to the enemy.
-    const back = clamp(P.BACK_MIN + P.BACK_K * d, P.BACK_MIN, P.BACK_MAX);
-    const up = clamp(P.UP_MIN + P.UP_K * d, P.UP_MIN, P.UP_MAX);
+    const back = clamp(P.BACK_MIN + P.BACK_K * d, P.BACK_MIN, P.BACK_MAX) * this.distanceScale;
+    const up = clamp(P.UP_MIN + P.UP_K * d, P.UP_MIN, P.UP_MAX) * (0.7 + 0.3 * this.distanceScale);
     this.nLat.crossVectors(this.uSep, UP).normalize().multiplyScalar(this.side);
     this.cTarget.copy(p1).addScaledVector(this.uSep, -back).addScaledVector(this.nLat, P.SIDE);
     this.cTarget.y = Math.max(p1.y, p2.y) * 0.35 + Math.min(p1.y, p2.y) * 0.65 + up;

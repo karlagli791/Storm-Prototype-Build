@@ -115,6 +115,8 @@ export function bindingFor(state: CombatState, ctx: ClipContext): StateBinding {
     case CombatState.GUARD_BREAK:
       return { act: 'PL_ACT_DMG_GUARDBREAK', anm: 'PL_ANM_DMG_GBR', clips: [O('1cmngbr0'), O('1cmnpiy0'), O('{c}gda0')] };
     case CombatState.HITSTUN:
+      if (ctx.moveClip && /(skl1|spl1)_dmg/.test(ctx.moveClip))
+        return { act: 'PL_ACT_DMG_DEMO', anm: 'PL_ANM_SKILL_1_DEMO_DMG1', clips: [O(ctx.moveClip), O('1cmndmg0'), O('{c}dmg0f')] };
       return {
         act: 'PL_ACT_DMG_NORMAL',
         anm: 'PL_ANM_DMG_CMN',

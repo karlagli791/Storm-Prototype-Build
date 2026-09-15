@@ -47,17 +47,20 @@ export class GamepadState {
   private pressedNow: boolean[] = new Array(18).fill(false);
   /** Short human-readable label for the HUD. */
   label = 'No controller';
+  /** Which connected pad this state follows (0 = first, 1 = second). */
+  constructor(public index = 0) {}
 
   poll(): PadSnapshot {
     const s = this.snap;
     let gp: Gamepad | null = null;
     if (typeof navigator !== 'undefined' && typeof navigator.getGamepads === 'function') {
       const pads = navigator.getGamepads();
+      let seen = 0;
       for (let i = 0; i < pads.length; i++) {
         const p = pads[i];
         if (p && p.connected) {
-          gp = p;
-          break;
+          if (seen === this.index) { gp = p; break; }
+          seen++;
         }
       }
     }

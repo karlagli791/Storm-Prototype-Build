@@ -18,6 +18,7 @@ export interface KeyBinding {
   throw: string[];
   charge: string[];
   support: string[];
+  support2: string[];
   ultimate: string[];
   up: string[];
   down: string[];
@@ -40,8 +41,31 @@ export const P1_BINDINGS: KeyBinding = {
   throw: ['KeyH'],
   charge: ['KeyN'],
   support: ['KeyY'],
+  support2: ['KeyT'],
   ultimate: ['KeyM'],
 };
+
+/** Second player on the keyboard: arrows + numpad cluster (used in 2P mode when no second pad). */
+export const P2_BINDINGS: KeyBinding = {
+  up: ['ArrowUp'],
+  down: ['ArrowDown'],
+  left: ['ArrowLeft'],
+  right: ['ArrowRight'],
+  attack: ['Numpad1'],
+  dash: ['Numpad2'],
+  jump: ['Numpad0'],
+  guard: ['Numpad3', 'ShiftRight'],
+  sub: ['NumpadDecimal'],
+  jutsu: ['Numpad4'],
+  switch: ['Numpad8'],
+  throw: ['Numpad5'],
+  charge: ['Numpad6'],
+  support: ['Numpad7'],
+  support2: ['Numpad9'],
+  ultimate: ['NumpadEnter', 'NumpadAdd'],
+};
+/** 1P bindings without the arrow keys (2P keyboard mode). */
+export const P1_BINDINGS_WASD: KeyBinding = { ...P1_BINDINGS, up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'] };
 
 /** Priority resolution: when multiple actions are buffered on the same frame, higher wins. */
 const ACTION_PRIORITY: Array<[InputFlag, number]> = [
@@ -165,12 +189,13 @@ export class KeyboardInputSource implements InputSource {
   private down = new Set<string>();
   private prevHeld = 0;
   /** Shared gamepad poller; polled once per sample. */
-  readonly pad = new GamepadState();
+  readonly pad: GamepadState;
 
   /** Keys pressed since the last sample: a tap shorter than one sim step still registers. */
   private latched = new Set<string>();
 
-  constructor(private binding: KeyBinding, target: Window = window) {
+  constructor(private binding: KeyBinding, target: Window = window, padIndex = 0) {
+    this.pad = new GamepadState(padIndex);
     target.addEventListener('keydown', (e) => {
       if (!this.down.has(e.code)) this.latched.add(e.code);
       this.down.add(e.code);
@@ -198,6 +223,7 @@ export class KeyboardInputSource implements InputSource {
     if (this.any(b.throw)) held |= InputFlag.THROW;
     if (this.any(b.charge)) held |= InputFlag.CHARGE;
     if (this.any(b.support)) held |= InputFlag.SUPPORT;
+    if (this.any(b.support2)) held |= InputFlag.SUPPORT2;
     if (this.any(b.ultimate)) held |= InputFlag.ULTIMATE;
     if (this.any(b.up)) held |= InputFlag.UP;
     if (this.any(b.down)) held |= InputFlag.DOWN;
@@ -224,7 +250,8 @@ export class KeyboardInputSource implements InputSource {
       if (b[PAD.R2]) held |= InputFlag.DASH | InputFlag.CHAKRA; // R2: chakra dash (hold to charge)
       if (b[PAD.SQUARE]) held |= InputFlag.THROW; // Square: shuriken (PL_ACT_PRJ)
       if (b[PAD.L2]) held |= InputFlag.GUARD | InputFlag.SUB; // L2: guard; the same press during hitstun = substitution
-      if (b[PAD.L1] || b[PAD.R1]) held |= InputFlag.SUPPORT; // L1 / R1: call support (PL_ACT_SUP_COMBO_JOIN)
+      if (b[PAD.L1]) held |= InputFlag.SUPPORT; // L1: call support 1 (PL_ACT_SUP_COMBO_JOIN)
+      if (b[PAD.R1]) held |= InputFlag.SUPPORT2; // R1: call support 2
       if (b[PAD.R3]) held |= InputFlag.SWITCH; // R3: leader switch
       if (b[PAD.DPAD_UP] || gp.ly > 0.6) held |= InputFlag.UP;
       if (b[PAD.DPAD_DOWN] || gp.ly < -0.6) held |= InputFlag.DOWN;

@@ -3,9 +3,13 @@
 import bpy, sys, os, addon_utils
 argv = sys.argv[sys.argv.index("--") + 1:]
 out, src = argv[0], argv[1]
+extra = argv[2:]  # extra containers whose 1cmnbod1-slot actions (victim demo clips) join the bank
 bpy.ops.wm.read_factory_settings(use_empty=True)
 addon_utils.enable("Blender-XFBIN-Importer", default_set=True, persistent=True)
 bpy.ops.import_scene.xfbin(directory=os.path.dirname(src), files=[{"name": os.path.basename(src)}])
+for x in extra:
+    try: bpy.ops.import_scene.xfbin(directory=os.path.dirname(os.path.abspath(x)), files=[{"name": os.path.basename(x)}])
+    except Exception as e: print("import failed", x, e)
 arm = bpy.data.objects["1cmnbod1"]
 keep = {arm}
 for o in bpy.data.objects:
@@ -28,6 +32,8 @@ for act in bpy.data.actions:
         if slot.name_display != arm.name:
             try: act.slots.remove(slot)
             except Exception as e: print("slot remove failed", act.name, slot.name_display, e)
+for act in list(bpy.data.actions):
+    if not any(sl.name_display == arm.name for sl in act.slots): bpy.data.actions.remove(act)
 print("clips:", sorted(a.name for a in bpy.data.actions))
 for o in keep: o.select_set(True)
 bpy.context.view_layer.objects.active = arm

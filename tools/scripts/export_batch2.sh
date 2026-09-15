@@ -10,7 +10,7 @@ pick() { # prints the larger of raw/$1 and raw/s4/$1
 }
 for code in "$@"; do
   files=""
-  for part in bod1 bod1c bod1l skl1 acc1 spl1; do f=$(pick ${code}${part}.xfbin); [ -n "$f" ] && files="$files $f"; done
+  for part in bod1 bod1c bod1l skl1 acc1 spl1 awa aws; do f=$(pick ${code}${part}.xfbin); [ -n "$f" ] && files="$files $f"; done
   echo "=== $code $(date +%T) :$files"
   "$B" -b --python tools/scripts/export_character.py -- $code public/assets/${code}.glb $files 2>&1 | grep -i "error\|traceback\|exported\|clips\|wrote\|Exception" | tail -8
   ls -la public/assets/${code}.glb 2>/dev/null

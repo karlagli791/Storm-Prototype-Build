@@ -21,7 +21,7 @@ let nextFighterId = 1;
 
 export class Fighter {
   readonly id = nextFighterId++;
-  readonly rig: FighterRig;
+  rig: FighterRig;
 
   position = new THREE.Vector3();
   velocity = new THREE.Vector3();
@@ -110,8 +110,35 @@ export class Fighter {
   /** Side of a throw started out of a ninja move (PRJ_DL / PRJ_DR clips); null = neutral throw. */
   throwDir: HitDir | null = null;
 
-  constructor(public readonly def: CharacterDef, public input: InputManager) {
+  /** The definition in force (swapped to `awakenedDef` while awakened). */
+  def: CharacterDef;
+  readonly baseDef: CharacterDef;
+  /** Second body for awakened forms with their own model (Naruto → 2nrv); swapped with `rig`. */
+  awRig: FighterRig | null = null;
+  constructor(def: CharacterDef, public input: InputManager) {
+    this.def = def;
+    this.baseDef = def;
     this.rig = new FighterRig(def);
+    if (def.awakenedDef && def.awakenedDef.code !== def.code) {
+      this.awRig = new FighterRig(def.awakenedDef);
+      this.awRig.root.visible = false;
+    }
+  }
+
+  /** Swap body + moveset for the awakened form (and back). */
+  setAwakenedForm(on: boolean): void {
+    const target = on ? this.baseDef.awakenedDef : this.baseDef;
+    if (!target || target === this.def) return;
+    this.def = target;
+    if (this.awRig) {
+      const from = this.rig, to = this.awRig;
+      to.root.position.copy(from.root.position);
+      to.root.rotation.copy(from.root.rotation);
+      to.root.visible = from.root.visible;
+      from.root.visible = false;
+      this.rig = to;
+      this.awRig = from;
+    }
   }
 
   get stats(): CombatStats {
@@ -217,20 +244,25 @@ export class Fighter {
 export class Team {
   readonly stats: CombatStats;
   active: Fighter;
-  bench: Fighter;
+  /** The two supports (Storm 3/4 team of three). Leader switch rotates a support in. */
+  supports: Fighter[];
   /** Fighters currently present in the arena (leader + any autonomous outgoing fighter). */
   readonly present: Fighter[] = [];
 
-  constructor(public readonly name: string, public readonly slot: number, leader: Fighter, support: Fighter, public humanSource: InputSource) {
+  constructor(public readonly name: string, public readonly slot: number, leader: Fighter, supports: Fighter[], public humanSource: InputSource) {
     this.stats = new CombatStats(leader.def.health);
     this.active = leader;
-    this.bench = support;
+    this.supports = supports;
     leader.team = this;
-    support.team = this;
+    for (const s of supports) { s.team = this; s.rig.root.visible = false; }
     this.present.push(leader);
     leader.rig.root.visible = true;
-    support.rig.root.visible = false;
   }
+
+  /** First support (legacy accessor). */
+  get bench(): Fighter { return this.supports[0]; }
+  /** Every member: leader first. */
+  get members(): Fighter[] { return [this.active, ...this.supports]; }
 
   get opponentTarget(): Fighter | null {
     return this.active.target;
@@ -240,9 +272,9 @@ export class Team {
    * Leader Switch: bench fighter appears at the leader's position inheriting translation
    * vectors; the outgoing leader finishes its current action autonomously, then retreats.
    */
-  performSwitch(): Fighter {
+  performSwitch(index = 0): Fighter {
     const out = this.active;
-    const inc = this.bench;
+    const inc = this.supports[index] ?? this.supports[0];
     inc.position.copy(out.position);
     inc.velocity.copy(out.velocity);
     inc.yaw = out.yaw;
@@ -264,7 +296,7 @@ export class Team {
     out.autonomous = true;
 
     this.active = inc;
-    this.bench = out;
+    this.supports[this.supports.indexOf(inc)] = out;
     if (!this.present.includes(inc)) this.present.push(inc);
     return inc;
   }

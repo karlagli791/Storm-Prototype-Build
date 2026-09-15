@@ -11,6 +11,7 @@ export const CEL_VERTEX = /* glsl */ `
   varying vec2 vUv;
 
   #include <skinning_pars_vertex>
+  uniform vec3 uSmear;
 
   void main() {
     vUv = uv;
@@ -21,6 +22,13 @@ export const CEL_VERTEX = /* glsl */ `
     #include <skinning_vertex>
 
     vec4 worldPos = modelMatrix * vec4(transformed, 1.0);
+    // Smear frame: vertices facing away from the travel direction trail behind (dash / hop streak).
+    float smearLen = length(uSmear);
+    if (smearLen > 0.0001) {
+      vec3 nW = normalize(mat3(modelMatrix) * objectNormal);
+      float k = max(0.0, -dot(nW, uSmear / smearLen));
+      worldPos.xyz -= uSmear * k;
+    }
     vPosW = worldPos.xyz;
     vNormalW = normalize(mat3(modelMatrix) * objectNormal);
     gl_Position = projectionMatrix * viewMatrix * worldPos;
@@ -105,6 +113,7 @@ export const OUTLINE_VERTEX = /* glsl */ `
   uniform float uRefDistance;
 
   #include <skinning_pars_vertex>
+  uniform vec3 uSmear;
 
   void main() {
     #include <beginnormal_vertex>
@@ -114,6 +123,13 @@ export const OUTLINE_VERTEX = /* glsl */ `
     #include <skinning_vertex>
 
     vec4 worldPos = modelMatrix * vec4(transformed, 1.0);
+    // Smear frame: vertices facing away from the travel direction trail behind (dash / hop streak).
+    float smearLen = length(uSmear);
+    if (smearLen > 0.0001) {
+      vec3 nW = normalize(mat3(modelMatrix) * objectNormal);
+      float k = max(0.0, -dot(nW, uSmear / smearLen));
+      worldPos.xyz -= uSmear * k;
+    }
     vec3 worldNormal = normalize(mat3(modelMatrix) * objectNormal);
     float dist = length(cameraPosition - worldPos.xyz);
     float scale = clamp(dist / uRefDistance, 0.5, 2.0);
@@ -157,6 +173,7 @@ export function createCelMaterial(opts: CelMaterialOptions): THREE.ShaderMateria
     vertexShader: CEL_VERTEX,
     fragmentShader: CEL_FRAGMENT,
     uniforms: {
+      uSmear: { value: new THREE.Vector3() },
       uAlbedo: { value: new THREE.Color(opts.albedo) },
       uLightDir: { value: SHARED_LIGHT.dir },
       uLightColor: { value: SHARED_LIGHT.color },
@@ -188,6 +205,7 @@ export function createOutlineMaterial(width = 0.035, ink: THREE.ColorRepresentat
     vertexShader: OUTLINE_VERTEX,
     fragmentShader: OUTLINE_FRAGMENT,
     uniforms: {
+      uSmear: { value: new THREE.Vector3() },
       uOutlineWidth: { value: width },
       uRefDistance: { value: 10.0 },
       uInk: { value: new THREE.Color(ink) },

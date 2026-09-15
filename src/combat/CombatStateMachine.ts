@@ -101,6 +101,7 @@ export class CombatStateMachine {
       if (f.awakenTimer <= 0 || (f.stats.chakra <= 0 && f.state !== CombatState.ULTIMATE)) {
         f.awakened = false;
         f.rig.setAwakened(false);
+        f.setAwakenedForm(false);
         this.events.emit('AWAKEN', { attackerId: f.id, defenderId: -1, damage: 0, text: `${f.def.displayName}: awakening ended`, color: 0xffb27a });
       }
     }
@@ -667,6 +668,7 @@ export class CombatStateMachine {
         t.yaw = Math.atan2(-this.tmpA.x, -this.tmpA.z);
         t.enterState(CombatState.HITSTUN);
         t.stunFrames = frames + 10;
+        this.victimDemoClip(t, `${f.def.code}spl1_dmg`, frames);
         this.events.emit('ULTIMATE', { attackerId: f.id, defenderId: t.id, damage: 0, text: `${f.def.displayName}: ${f.def.ultimateName ?? 'ULTIMATE'} — demo`, color: 0xffffff });
       } else {
         f.hitstopFrames = 22;
@@ -689,6 +691,7 @@ export class CombatStateMachine {
         t.invulnFrames = 2;
         t.velocity.set(0, 0, 0);
         t.flashTimer = 0; // hitstop skips the tick that fades the hit flash
+        if (t.currentMove) t.moveFrame = f.moveFrame;
       }
       if (f.moveFrame >= move.totalFrames) {
         f.cinematic = false;
@@ -745,6 +748,7 @@ export class CombatStateMachine {
     if (f.stateFrame >= AWAKEN_FRAMES) {
       f.awakened = true;
       f.awakenTimer = AWAKEN_DURATION;
+      f.setAwakenedForm(true);
       f.stats.chakra = Math.max(f.stats.chakra, 40);
       f.rig.setAwakened(true, (f.def.color as number) === 0x1a1a1a ? 0xff7a1a : 0xff7a1a);
       const p = f.position.clone(); p.y += 1;
@@ -941,6 +945,13 @@ export class CombatStateMachine {
   /** Set by the game: does an exported cinematic camera exist for this clip? */
   hasCinematicCam: (clip: string) => boolean = () => false;
 
+  /** Play the attacker's victim clip on the held target when it was retargeted onto their rig. */
+  private victimDemoClip(t: Fighter, clip: string, frames: number): void {
+    if (!t.rig.hasClip(clip)) return;
+    t.beginMove({ ...t.def.jutsu, name: 'demo_dmg', clip, totalFrames: frames, hitboxes: [] }, 'NEUTRAL', 0);
+    t.moveFrame = 0;
+  }
+
   /** Jutsu demo: attacker rooted on the demo clip, victim frozen in frame, launched on the last frame. */
   private updateJutsuDemo(f: Fighter, move: MoveDef): void {
     const t = f.target;
@@ -955,6 +966,7 @@ export class CombatStateMachine {
       t.invulnFrames = 2;
       t.velocity.set(0, 0, 0);
       t.flashTimer = 0;
+      if (t.currentMove) t.moveFrame = f.moveFrame;
     }
     if (f.moveFrame >= move.totalFrames) {
       f.cinematic = false;
@@ -1002,6 +1014,7 @@ export class CombatStateMachine {
         t.enterState(CombatState.HITSTUN);
         t.stunFrames = frames + 10;
         t.hitstopFrames = 0;
+        this.victimDemoClip(t, `${f.def.code}skl1_dmg1`, frames);
         this.events.emit('JUTSU', { attackerId: f.id, defenderId: t.id, damage: 0, text: `${f.def.displayName}: ${f.def.jutsuName ?? 'JUTSU'} — demo`, color: 0xbfe8ff });
         return;
       }

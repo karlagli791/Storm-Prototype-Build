@@ -29,6 +29,8 @@ export interface PoseContext {
   moveDir: HitDir;
   hitDir: HitDir;
   throwDir?: HitDir | null;
+  /** Awakened clip infix in force ('awa' / 'aws') or null. */
+  awInfix?: string | null;
   falling: boolean;
   airDash?: boolean;
   jumpCount?: number;
@@ -392,6 +394,9 @@ export class FighterRig {
         const from = this.def.animBank;
         loadAnimBank(`assets/${from}.glb`).then((bank) => retarget(bank, from, (n) => n.replace(new RegExp(`^${from}`), code), false));
       }
+      this.retargetFn = retarget;
+      for (const from of this.pendingDemoBanks) this.importDemoClips(from);
+      this.pendingDemoBanks.length = 0;
       if (RIG_RAMP.texture) setRamp(scene, RIG_RAMP.texture, RIG_RAMP.row);
 
       this.root.remove(this.mannequin);
@@ -462,6 +467,42 @@ export class FighterRig {
     (this.shadow.material as THREE.MeshBasicMaterial).opacity = 0.35 * k;
   }
 
+  private retargetFn: ((bank: THREE.AnimationClip[], from: string, rename: (n: string) => string, overwrite: boolean) => void) | null = null;
+  private pendingDemoBanks: string[] = [];
+  /** Retarget another character's victim clips (skl1_dmg*, spl1_dmg) onto this rig, names kept. */
+  importDemoClips(fromCode: string): void {
+    if (fromCode === this.def.code) return;
+    if (!this.retargetFn) { this.pendingDemoBanks.push(fromCode); return; }
+    const fn = this.retargetFn;
+    loadAnimBank(`assets/${fromCode}.glb`).then((bank) => fn(bank.filter((c) => /(skl1|spl1)_dmg/.test(c.name)), fromCode, (n) => n, false));
+  }
+
+  private awInfix = '';
+  private smearVec = new THREE.Vector3();
+  /** Smear-frame stretch (world metres) applied to every cel/outline material; zero to clear. */
+  setSmear(v: THREE.Vector3): void {
+    if (this.smearVec.distanceToSquared(v) < 1e-8) return;
+    this.smearVec.copy(v);
+    this.root.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.ShaderMaterial | undefined;
+      if (!m || !(m as THREE.ShaderMaterial).uniforms) return;
+      const u = (m as THREE.ShaderMaterial).uniforms;
+      if (u.uSmear) (u.uSmear.value as THREE.Vector3).copy(v);
+    });
+  }
+  /** Stage lighting: sun colour, ambient and rim on every cel material. */
+  setLighting(sun: number, ambient: number, rim: number, dir: THREE.Vector3): void {
+    this.root.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.ShaderMaterial | undefined;
+      if (!m || !(m as THREE.ShaderMaterial).uniforms) return;
+      const u = (m as THREE.ShaderMaterial).uniforms;
+      if (u.uLightColor) (u.uLightColor.value as THREE.Color).set(sun);
+      if (u.uAmbient) (u.uAmbient.value as THREE.Color).set(ambient);
+      if (u.uRimColor && !this.awakenedVisual) (u.uRimColor.value as THREE.Color).set(rim);
+      if (u.uLightDir) (u.uLightDir.value as THREE.Vector3).copy(dir).normalize();
+    });
+  }
+
   private awakenedVisual = false;
   /** Awakening look: hot rim light on every cel material (restored when it ends). */
   setAwakened(on: boolean, color = 0xff7a1a): void {
@@ -487,6 +528,11 @@ export class FighterRig {
 
   /** Resolve a clip spec against the clips actually present ({c} → character code). */
   private resolve(spec: ClipSpec): ClipSpec | null {
+    // Awakened forms: the parameter table's awakening clips carry an infix (2nrvawanut0, 2garawstk00).
+    if (this.awInfix) {
+      const aw = spec.clip.replace('{c}', this.def.code + this.awInfix);
+      if (this.clips.has(aw)) return { clip: aw, loop: spec.loop, next: spec.next?.replace('{c}', this.def.code + this.awInfix) };
+    }
     const name = spec.clip.replace('{c}', this.def.code);
     if (this.clips.has(name)) return { clip: name, loop: spec.loop, next: spec.next?.replace('{c}', this.def.code) };
     // partial match (e.g. skl1_s → skl1_s1)
@@ -533,7 +579,8 @@ export class FighterRig {
 
   private updateGlbAnimation(ctx: PoseContext, dt: number): void {
     // Re-pick on state change, on hit direction / fall changes, or when a one-shot finished and has a chain.
-    const stateKey = `${ctx.state}|${ctx.moveClip ?? ''}|${ctx.jumpCount ?? 0}|${ctx.airDash ? 1 : 0}|${ctx.hitDir}|${ctx.falling ? 1 : 0}|${ctx.throwDir ?? ''}`;
+    const stateKey = `${ctx.state}|${ctx.moveClip ?? ''}|${ctx.jumpCount ?? 0}|${ctx.airDash ? 1 : 0}|${ctx.hitDir}|${ctx.falling ? 1 : 0}|${ctx.throwDir ?? ''}|${ctx.awInfix ?? ''}`;
+    this.awInfix = ctx.awInfix ?? '';
     const spec = this.pickSpec(ctx);
     if (spec) {
       const changed = this.activeState !== stateKey || !this.activeSpec;

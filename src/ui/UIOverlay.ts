@@ -23,13 +23,12 @@ export interface HudFighterData {
   comboHits: number;
   comboDamage: number;
   isLeader: boolean;
-  partnerName: string;
-  /** Storm 2 face_le portrait paths (leader / support). */
+  /** Storm 2 face_le portrait path of the leader. */
   portrait: string | null;
-  supportPortrait: string | null;
-  supportType: 'ATTACK' | 'GUARD' | 'BALANCE';
-  /** Support gauge at or above the call cost. */
-  supportReady: boolean;
+  /** The two supports (L1 / R1). */
+  supports: { name: string; portrait: string | null; type: 'ATTACK' | 'GUARD' | 'BALANCE'; ready: boolean }[];
+  /** Human-controlled side (shows button tags instead of AI). */
+  human: boolean;
   awakened: boolean;
   ultimateReady: boolean;
   /** PL_ACT_* name of the current state (debug readout). */
@@ -354,41 +353,37 @@ export class UIOverlay {
     this.skewBar(cx, cy, cw, ch, f.chakra / 100, '#4fc3ff', dir);
     this.skewOutline(cx, cy, cw, ch, dir, 'rgba(160,220,255,0.7)');
 
-    // Support medallion under the portrait (Storm 2 shows the support faces with LB/RB tags)
-    const sr = 22;
-    const sx = mirror ? px + 6 : px - 6;
-    const sy = py + pr + sr + 6;
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(sx, sy, sr + 3, 0, Math.PI * 2);
-    ctx.fillStyle = f.supportReady ? '#8a4dff' : '#2a2438';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(sx, sy, sr, 0, Math.PI * 2);
-    ctx.clip();
-    const sim = portrait(f.supportPortrait);
-    if (sim) ctx.drawImage(sim, sx - sr, sy - sr, sr * 2, sr * 2);
-    else {
-      ctx.fillStyle = '#555';
-      ctx.fillRect(sx - sr, sy - sr, sr * 2, sr * 2);
+    // Support medallions under the portrait (Storm 3/4 layout: two faces with L1 / R1 tags)
+    const sr = 19;
+    for (let si = 0; si < f.supports.length; si++) {
+      const sup = f.supports[si];
+      const sx = mirror ? px + 6 + si * (sr * 2 + 10) : px - 6 - si * (sr * 2 + 10);
+      const sy = py + pr + sr + 6;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr + 3, 0, Math.PI * 2);
+      ctx.fillStyle = sup.ready ? (sup.type === 'ATTACK' ? '#c0392b' : sup.type === 'GUARD' ? '#2c6fd2' : '#8a4dff') : '#2a2438';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+      ctx.clip();
+      const sim = portrait(sup.portrait);
+      if (sim) ctx.drawImage(sim, sx - sr, sy - sr, sr * 2, sr * 2);
+      else { ctx.fillStyle = '#555'; ctx.fillRect(sx - sr, sy - sr, sr * 2, sr * 2); }
+      if (!sup.ready) { ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(sx - sr, sy - sr, sr * 2, sr * 2); }
+      ctx.restore();
+      ctx.save();
+      ctx.font = 'bold 9px "Segoe UI", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#111';
+      ctx.fillRect(sx - 14, sy + sr - 2, 28, 12);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(f.human ? (si === 0 ? 'L1' : 'R1') : 'AI', sx, sy + sr + 7);
+      ctx.font = '8px "Segoe UI", system-ui, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.fillText(sup.type[0], sx, sy - sr - 3);
+      ctx.restore();
     }
-    if (!f.supportReady) {
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      ctx.fillRect(sx - sr, sy - sr, sr * 2, sr * 2);
-    }
-    ctx.restore();
-    ctx.save();
-    ctx.font = 'bold 10px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#111';
-    ctx.fillRect(sx - 16, sy + sr - 2, 32, 13);
-    ctx.fillStyle = '#fff';
-    ctx.fillText(mirror ? 'AI' : 'R1', sx, sy + sr + 8);
-    ctx.font = '9px "Segoe UI", system-ui, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.textAlign = mirror ? 'right' : 'left';
-    ctx.fillText(`${f.partnerName} · ${f.supportType}`, mirror ? sx - sr - 6 : sx + sr + 6, sy + 4);
-    ctx.restore();
 
     // Support gauge (thin, purple) under the chakra bar
     const gy = cy + ch + 5;

@@ -1,14 +1,15 @@
 /**
- * SupportSystem.ts — Support characters (PL_ACT_SUP_*): manual call (combo join) plus the three
+ * SupportSystem.ts — Support characters (PL_ACT_SUP_*): two supports per team, each with a
+ * chosen assist type. Manual calls (L1 = support 1, R1 = support 2: combo join) plus the three
  * automatic intervention types confirmed by the prototype's debug select:
  *   ATTACK  = combo join + strike back (PL_ACT_SUP_COMBO_JOIN / DMG_BOUND_STRIKESUPPORT)
  *   GUARD   = dash cut + charge guard (PL_ACT_SUP_DASH_CUT / SUP_CHARGE_GUARD)
  *   BALANCE = cover fire (DAMAGERATE_SUPPORT_COVERING_FIRE)
- * The bench fighter physically enters the arena (PL_ACT_SUP_ENTRY), acts autonomously for a few
- * dozen frames, and exits (PL_ACT_SUP_EXIT). While present it can hit but cannot be hit.
+ * A support physically enters the arena (PL_ACT_SUP_ENTRY), acts autonomously for a few dozen
+ * frames, and exits (PL_ACT_SUP_EXIT). While present it can hit but cannot be hit.
  */
 import * as THREE from 'three';
-import { CombatState, InputFlag } from '../core/Types';
+import { CombatState, InputFlag, SupportType } from '../core/Types';
 import { Fighter, Team, EventSink } from './Fighter';
 import { CombatStateMachine } from './CombatStateMachine';
 import { Projectiles } from './Projectiles';
@@ -41,74 +42,76 @@ export class SupportSystem {
 
   constructor(private fsm: CombatStateMachine, private projectiles: Projectiles, private effects: Effects, private events: EventSink) {}
 
-  /** Support type of a team's bench fighter. */
-  typeOf(team: Team): 'ATTACK' | 'GUARD' | 'BALANCE' {
-    return team.bench.def.supportType;
+  /** Assist type of a support (chosen on the select screen, defaults to the character's own). */
+  typeOf(s: Fighter): SupportType {
+    return s.supportType ?? s.def.supportType;
   }
 
-  private canIntervene(team: Team): boolean {
-    const bench = team.bench;
-    if (bench.autonomous || bench.rig.root.visible) return false;
-    if (bench.supportCooldown > 0) return false;
+  private ready(team: Team, s: Fighter): boolean {
+    if (s.autonomous || s.rig.root.visible) return false;
+    if (s.supportCooldown > 0) return false;
     if (team.active.state === CombatState.DEAD) return false;
     return team.stats.supportGauge >= BALANCE.SUPPORT_GAUGE_USE_NORMAL;
   }
 
-  /** Manual call: R1 / Y. The support runs in and performs its first string move (combo join). */
-  requestCall(team: Team): boolean {
-    if (!this.canIntervene(team)) return false;
+  /** Any support of the team that can come out right now. */
+  isReady(team: Team, index: number): boolean {
+    const s = team.supports[index];
+    return !!s && this.ready(team, s);
+  }
+
+  /** Manual call: L1 / R1 (Y / T). The support runs in and fires its jutsu (combo join). */
+  requestCall(team: Team, index: number): boolean {
+    const s = team.supports[index];
+    if (!s || !this.ready(team, s)) return false;
     const lead = team.active;
     if (!lead.target) return false;
     team.stats.spendSupport(BALANCE.SUPPORT_GAUGE_USE_NORMAL);
-    this.enter(team, 'COMBO_JOIN');
+    this.enter(team, 'COMBO_JOIN', s);
     return true;
   }
 
   /** Automatic interventions, evaluated every tick for both teams. */
   update(dt: number, teams: Team[]): void {
     for (const team of teams) {
-      const bench = team.bench;
-      if (bench.supportCooldown > 0) bench.supportCooldown -= dt;
-      // Support gauge recovers at the type's rate (SUP_GAUGE_RECOVER_RATE_*TYPE)
-      const type = this.typeOf(team);
-      const rate = type === 'ATTACK' ? BALANCE.SUP_GAUGE_RECOVER_RATE_ATTACKTYPE : type === 'GUARD' ? BALANCE.SUP_GAUGE_RECOVER_RATE_GUARDTYPE : BALANCE.SUP_GAUGE_RECOVER_RATE_BALANCETYPE;
+      for (const s of team.supports) if (s.supportCooldown > 0) s.supportCooldown -= dt;
+      // Support gauge recovers at the best of the two types' rates (SUP_GAUGE_RECOVER_RATE_*TYPE)
+      const rateOf = (t: SupportType) => (t === 'ATTACK' ? BALANCE.SUP_GAUGE_RECOVER_RATE_ATTACKTYPE : t === 'GUARD' ? BALANCE.SUP_GAUGE_RECOVER_RATE_GUARDTYPE : BALANCE.SUP_GAUGE_RECOVER_RATE_BALANCETYPE);
+      const rate = Math.max(...team.supports.map((s) => rateOf(this.typeOf(s))));
       team.stats.supportGauge = Math.min(100, team.stats.supportGauge + BALANCE.SUPPORT_GAUGE_RECOVER_SPD * (rate - 1) * dt);
 
-      if (!this.canIntervene(team)) continue;
       const lead = team.active;
       const enemy = lead.target;
-      if (!enemy) continue;
+      if (!enemy || lead.state === CombatState.DEAD) continue;
       const dist = lead.distanceToTarget();
-      switch (type) {
-        case 'BALANCE':
-          // Cover fire: enemy far away and closing or dashing.
-          if (dist > 9 && (enemy.state === CombatState.RUNNING || enemy.state === CombatState.DASH_HOMING || enemy.state === CombatState.SPARK_DASH)) {
-            team.stats.spendSupport(BALANCE.SUPPORT_GAUGE_USE_NORMAL);
-            this.enter(team, 'COVER_FIRE');
-          }
-          break;
-        case 'GUARD':
-          // Dash cut: an incoming enemy chakra dash while the leader is not able to answer.
-          if ((enemy.state === CombatState.DASH_HOMING || enemy.state === CombatState.SPARK_DASH) && dist < 7 && VULNERABLE_TO_DASH.has(lead.state)) {
-            team.stats.spendSupport(BALANCE.SUPPORT_GAUGE_USE_NORMAL);
-            this.enter(team, 'DASH_CUT');
-          } else if (lead.state === CombatState.GUARD_BREAK && lead.stateFrame < 4) {
-            // Charge guard: covers the leader's broken guard
-            team.stats.spendSupport(BALANCE.SUPPORT_GAUGE_USE_NORMAL);
-            this.enter(team, 'CHARGE_GUARD');
-          }
-          break;
-        case 'ATTACK':
-          // Strike back: the enemy is flying away from our leader after a launch — bounce them back.
-          if (LAUNCH_STATES.has(enemy.state) && enemy.lastHitBy === lead.id && enemy.stateFrame > 6 && enemy.stateFrame < 20) {
-            this.tmp.subVectors(enemy.position, lead.position);
-            const away = this.tmp.dot(enemy.velocity) > 0 && Math.hypot(enemy.velocity.x, enemy.velocity.z) > 6;
-            if (away) {
-              team.stats.spendSupport(BALANCE.SUPPORT_GAUGE_USE_NORMAL);
-              this.enter(team, 'STRIKE_BACK');
+      for (const s of team.supports) {
+        if (!this.ready(team, s)) continue;
+        const type = this.typeOf(s);
+        let action: SupportAction | null = null;
+        switch (type) {
+          case 'BALANCE':
+            // Cover fire: enemy far away and closing or dashing.
+            if (dist > 9 && (enemy.state === CombatState.RUNNING || enemy.state === CombatState.DASH_HOMING || enemy.state === CombatState.SPARK_DASH)) action = 'COVER_FIRE';
+            break;
+          case 'GUARD':
+            // Dash cut: an incoming enemy chakra dash while the leader is not able to answer.
+            if ((enemy.state === CombatState.DASH_HOMING || enemy.state === CombatState.SPARK_DASH) && dist < 7 && VULNERABLE_TO_DASH.has(lead.state)) action = 'DASH_CUT';
+            else if (lead.state === CombatState.GUARD_BREAK && lead.stateFrame < 4) action = 'CHARGE_GUARD';
+            break;
+          case 'ATTACK':
+            // Strike back: the enemy is flying away from our leader after a launch — bounce them back.
+            if (LAUNCH_STATES.has(enemy.state) && enemy.lastHitBy === lead.id && enemy.stateFrame > 6 && enemy.stateFrame < 20) {
+              this.tmp.subVectors(enemy.position, lead.position);
+              const away = this.tmp.dot(enemy.velocity) > 0 && Math.hypot(enemy.velocity.x, enemy.velocity.z) > 6;
+              if (away) action = 'STRIKE_BACK';
             }
-          }
-          break;
+            break;
+        }
+        if (action) {
+          team.stats.spendSupport(BALANCE.SUPPORT_GAUGE_USE_NORMAL);
+          this.enter(team, action, s);
+          break; // one intervention at a time
+        }
       }
     }
 
@@ -137,7 +140,6 @@ export class SupportSystem {
           }
           break;
         case 'CHARGE_GUARD':
-          // Stand in front of the leader with a guard sphere: incoming melee is absorbed by the support.
           break;
         case 'COMBO_JOIN':
           break;
@@ -146,21 +148,18 @@ export class SupportSystem {
     }
   }
 
-  private enter(team: Team, action: SupportAction): void {
+  private enter(team: Team, action: SupportAction, s: Fighter): void {
     const lead = team.active;
-    const s = team.bench;
     const enemy = lead.target;
     // Spawn beside the leader, facing the enemy
     lead.forward(this.tmp);
-    const side = new THREE.Vector3(-this.tmp.z, 0, this.tmp.x).multiplyScalar(action === 'CHARGE_GUARD' ? 0 : 1.6);
+    const side = new THREE.Vector3(-this.tmp.z, 0, this.tmp.x).multiplyScalar(action === 'CHARGE_GUARD' ? 0 : team.supports.indexOf(s) === 0 ? 1.6 : -1.6);
     s.position.copy(lead.position).add(side);
     if (action === 'DASH_CUT' && enemy) {
-      // Step into the dash line between leader and enemy
       s.position.copy(lead.position).lerp(enemy.position, 0.35);
     } else if (action === 'CHARGE_GUARD' && enemy) {
       s.position.copy(lead.position).addScaledVector(this.tmp, 1.2);
     } else if (action === 'STRIKE_BACK' && enemy) {
-      // Appear where the enemy is heading
       s.position.copy(enemy.position).addScaledVector(enemy.velocity, 0.25);
       s.position.y = 0;
     } else if (action === 'COMBO_JOIN' && enemy) {
@@ -169,6 +168,7 @@ export class SupportSystem {
       s.position.copy(enemy.position).addScaledVector(this.tmp, -reach);
       s.position.y = 0;
     }
+    s.position.y = Math.max(s.position.y, lead.groundY);
     s.velocity.set(0, 0, 0);
     s.grounded = true;
     s.target = enemy;
@@ -180,7 +180,6 @@ export class SupportSystem {
     if (!team.present.includes(s)) team.present.push(s);
     const frames = action === 'COVER_FIRE' ? 40 : action === 'CHARGE_GUARD' ? 45 : action === 'COMBO_JOIN' ? s.def.jutsu.totalFrames + 12 : 50;
     if (action === 'COMBO_JOIN') {
-      // Manual assist (R1 / Y): the support appears beside the enemy and fires its jutsu, then leaves.
       s.enterState(CombatState.SUPPORT_ACT);
       s.beginMove(s.def.jutsu, 'NEUTRAL', 0);
     } else if (action === 'STRIKE_BACK' || action === 'DASH_CUT') {
@@ -215,13 +214,13 @@ export class SupportSystem {
     return this.active.some((a) => a.fighter === f);
   }
 
-  /** Consume a buffered support-call input for a team. */
+  /** Consume buffered support-call inputs for a team (L1 → support 1, R1 → support 2). */
   pollInput(team: Team): void {
     const lead = team.active;
     if (lead.autonomous) return;
-    if (lead.input.buffer.consume(InputFlag.SUPPORT)) {
-      if (!this.requestCall(team)) lead.input.buffer.flush(InputFlag.SUPPORT);
-    }
+    const buf = lead.input.buffer;
+    if (buf.consume(InputFlag.SUPPORT)) { if (!this.requestCall(team, 0)) buf.flush(InputFlag.SUPPORT); }
+    if (buf.consume(InputFlag.SUPPORT2)) { if (!this.requestCall(team, 1)) buf.flush(InputFlag.SUPPORT2); }
   }
 
   reset(): void {

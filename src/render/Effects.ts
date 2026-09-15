@@ -42,11 +42,76 @@ const VFX_TEX: Record<string, string> = {
   circle: 'assets/vfx/circle_05.png',
   trace: 'assets/vfx/trace_03.png',
   scorch: 'assets/vfx/scorch_01.png',
+  scratch: 'assets/vfx/scratch_01.png',
+  trace1: 'assets/vfx/trace_01.png',
+  window: 'assets/vfx/window_01.png',
   flame: 'assets/vfx/flame_03.png',
 };
 
+interface GroundFx { mesh: THREE.Mesh; life: number; maxLife: number; grow: number; fadeIn: number; }
+
 export class Effects {
   readonly group = new THREE.Group();
+  private ground: GroundFx[] = [];
+  private decals: GroundFx[] = [];
+  private groundMatCache = new Map<string, THREE.MeshBasicMaterial>();
+  private planeGeo = new THREE.PlaneGeometry(1, 1);
+
+  private groundMat(name: string, color: number, additive: boolean): THREE.MeshBasicMaterial {
+    const key = `${name}|${color}|${additive ? 1 : 0}`;
+    let m = this.groundMatCache.get(key);
+    if (!m) {
+      m = new THREE.MeshBasicMaterial({ map: this.tex(name), color, transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      this.groundMatCache.set(key, m);
+    }
+    return m;
+  }
+
+  private groundPlane(name: string, pos: THREE.Vector3, size: number, color: number, additive: boolean, life: number, grow: number, list: GroundFx[], fadeIn = 0, rot = 0): void {
+    const mesh = new THREE.Mesh(this.planeGeo, this.groundMat(name, color, additive).clone());
+    mesh.rotation.set(-Math.PI / 2, 0, rot);
+    mesh.position.copy(pos);
+    mesh.position.y += 0.035 + list.length * 0.0004;
+    mesh.scale.setScalar(size);
+    mesh.renderOrder = 5;
+    this.group.add(mesh);
+    list.push({ mesh, life, maxLife: life, grow, fadeIn });
+    if (list.length > 28) { const old = list.shift()!; this.group.remove(old.mesh); }
+  }
+
+  /** Expanding flat ring on the ground (dash launch, landings, impacts). */
+  groundRing(pos: THREE.Vector3, size = 2.2, color = 0xfff4d8, life = 0.35): void {
+    this.groundPlane('circle', pos, size * 0.4, color, true, life, size * 3.2, this.ground);
+  }
+  /** Low, heavy dust kicked up at the feet. */
+  dustKick(pos: THREE.Vector3, count = 8, size = 0.7, spread = 0.6): void {
+    this.spriteBurst('smoke2', pos, { color: 0xd8cfc0, count, size, life: 0.55, speed: 2.2 * spread, up: 0.8, gravity: -1.5, grow: 2.2, spread: 1, fadeIn: 0.05 });
+    this.spriteBurst('dirt', pos, { color: 0xb8a890, count: Math.ceil(count / 2), size: size * 0.4, life: 0.5, speed: 4 * spread, up: 3, gravity: 14, spin: 6 });
+  }
+  /** Persistent crack / scorch decal where something hit the ground hard. */
+  groundCrack(pos: THREE.Vector3, size = 2.0, scorch = false): void {
+    this.groundPlane(scorch ? 'scorch' : 'scratch', pos, size, scorch ? 0x1a1410 : 0x2a2420, false, 9.0, 0, this.decals, 0, Math.random() * Math.PI * 2);
+    this.dustKick(pos, 10, 0.9, 1.1);
+    this.groundRing(pos, size * 1.6, 0xe8dcc0, 0.3);
+  }
+  /** Gust: a wide, fast, faint ring plus a puff of air streaks (jumps, dashes, heavy swings). */
+  gust(pos: THREE.Vector3, size = 3, color = 0xffffff): void {
+    this.groundRing(pos, size, color, 0.28);
+    this.spriteBurst('trace', pos, { color: 0xffffff, count: 4, size: 0.9, life: 0.22, speed: 6, up: 0.4, additive: true, spread: 1, grow: 2.5 });
+  }
+  private updateGround(dt: number): void {
+    for (const list of [this.ground, this.decals]) {
+      for (let i = list.length - 1; i >= 0; i--) {
+        const g = list[i];
+        g.life -= dt;
+        const t = 1 - Math.max(0, g.life) / g.maxLife;
+        if (g.grow) g.mesh.scale.setScalar(g.mesh.scale.x + g.grow * dt);
+        const m = g.mesh.material as THREE.MeshBasicMaterial;
+        m.opacity = list === this.decals ? (g.life < 2 ? g.life / 2 : 1) * 0.85 : (1 - t) * (1 - t);
+        if (g.life <= 0) { this.group.remove(g.mesh); list.splice(i, 1); }
+      }
+    }
+  }
   private particles: Particle[] = [];
   private sprites: SpriteFx[] = [];
   private texCache = new Map<string, THREE.Texture>();
@@ -131,6 +196,7 @@ export class Effects {
   }
 
   update(dt: number): void {
+    this.updateGround(dt);
     for (let i = this.sprites.length - 1; i >= 0; i--) {
       const p = this.sprites[i];
       p.life -= dt;

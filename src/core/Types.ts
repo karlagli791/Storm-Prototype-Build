@@ -189,6 +189,8 @@ export enum InputFlag {
   /** Call the support character (PL_ACT_SUP_ENTRY → combo join). */
   SUPPORT = 1 << 12,
   ULTIMATE = 1 << 13,
+  /** Second support (R1 / T). */
+  SUPPORT2 = 1 << 14,
 }
 
 export interface InputFrame {
@@ -315,6 +317,16 @@ export interface CharacterDef {
   vsFace?: string;
   /** Borrow another character's clip set (same CC2 body skeleton); tracks are retargeted by bone prefix. */
   animBank?: string;
+  /** Awakened form: a second body/clip set (`<code>.glb`) with its own strings from the parameter table. */
+  awakenedCode?: string;
+  /** Awakened form description for the HUD / move list. */
+  awakenedName?: string;
+  /** Full awakened definition (body, strings) swapped in while awakened. */
+  awakenedDef?: CharacterDef;
+  /** Voice bank to use when the code differs (awakened bodies keep the base voice). */
+  voiceCode?: string;
+  /** Awakened clip infix: state bindings try `<code><infix>…` before `<code>…` ('awa' / 'aws'). */
+  awClipInfix?: string;
   /** Aerial string (○ while airborne); the last hit spikes the enemy down. */
   airString?: ComboStringDef;
   /** Ultimate jutsu (SPSKILL): name, clip prefix (spl1) and sound cue. */

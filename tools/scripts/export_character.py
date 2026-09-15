@@ -73,7 +73,7 @@ for mat in bpy.data.materials:
 
 # Keep only gameplay clips
 all_names = [a.name for a in bpy.data.actions]
-pat = re.compile(rf"^{code}(spl1_(s|l|e|atk)|itm\w*|it[lr]0|skl\w*|sk[a-z]\d\w*|jut\w*|nut0|run1|jmp0|jmp1|lan0|dsf0|dsb0|dsl0|dsr0|dsh0l|dsh0s|dsh1l|grd0|gda0|ghf0|ghl0|ghr0|ght1|git0|git1|dow0|dow1|dmg0f|cma0[0-9]|cmb0[0-9]|cmb1[0-9]|cmr0[0-9]|ent0|hola0|hold0|inn0|spk0f|nxi0|rxn0|ixn0)$")
+pat = re.compile(rf"^{code}(spl1_(s|l|e|atk|dmg)|itm\w*|it[lr]0|win1[01]|aw[as]\w*|skl\w*|sk[a-z]\d\w*|jut\w*|nut0|run1|jmp0|jmp1|lan0|dsf0|dsb0|dsl0|dsr0|dsh0l|dsh0s|dsh1l|grd0|gda0|ghf0|ghl0|ghr0|ght1|git0|git1|dow0|dow1|dmg0f|cma0[0-9]|cmb0[0-9]|cmb1[0-9]|cmr0[0-9]|ent0|hola0|hold0|inn0|spk0f|nxi0|rxn0|ixn0)$")
 for act in list(bpy.data.actions):
     if not pat.match(act.name):
         bpy.data.actions.remove(act)

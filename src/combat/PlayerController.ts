@@ -108,6 +108,7 @@ export class PlayerController {
         moveDir: f.moveDirLocal,
         hitDir: f.lastHitDir,
         throwDir: f.throwDir,
+        awInfix: f.def.awClipInfix ?? null,
         falling: !f.grounded && f.velocity.y < -0.5,
         framesLeft: f.state === CombatState.KNOCKDOWN ? 34 - f.stateFrame : f.stunFrames,
       },

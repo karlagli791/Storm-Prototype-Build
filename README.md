@@ -18,6 +18,13 @@ npm run dev        # http://localhost:5173   (?stage=sd05a picks the other stage
 npm run build      # type-check + production bundle in dist/
 ```
 
+## Game modes
+
+Title → main menu → **Free Battle (VS COM / VS PLAYER)**, **Training**, **Move List**, **Options**,
+**Credits**. Each side picks a leader and two supports with an assist type (Attack / Guard /
+Balance); 24 fighters, 21 stages. Player 2 uses the second controller or the arrow keys + numpad
+(`Options → 2P device`). Pause with Options / P; results offer rematch, character select or title.
+
 ## Controls
 
 | Keyboard | PS5 / Xbox pad | Action |
@@ -31,7 +38,7 @@ npm run build      # type-check + production bundle in dist/
 | Space in the air | Cross in the air | **Double jump**; with a direction = **air ninja move** |
 | J in the air | Circle in the air | **Air string** (3 hits, the last spikes the enemy down) |
 | H | Square / X | **Shuriken** throw (3% chakra, guardable, parryable, dashes pierce it); also in the air and out of a ninja-move hop (cancels the hop) |
-| Y | L1 / R1 | **Support call** (50% support gauge): the bench fighter runs in for a combo join. Automatic interventions: Balance = Cover Fire, Guard = Dash Cut / Charge Guard, Attack = Strike Back |
+| Y / T | L1 / R1 | **Support call** (50% support gauge): support 1 / support 2 runs in for a combo join. Automatic interventions: Balance = Cover Fire, Guard = Dash Cut / Charge Guard, Attack = Strike Back |
 | L / Shift | L2 / L1 | Guard (guard sphere, durability 100, blue → yellow → red) |
 | L + J | L2 + Circle | **Guard Break Counter** (frames 2–7 parry, costs 20% of max chakra for 20 s) |
 | I | L2 during hitstun | **Substitution** (1 of 4 stocks, 14 s sequential recharge) |
