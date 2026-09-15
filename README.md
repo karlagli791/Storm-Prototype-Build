@@ -163,6 +163,13 @@ npm run dist:win
 The second command writes a portable `.exe` and an NSIS installer to `release/`; installed builds
 check the GitHub releases of this repository for updates.
 
+## Frame data
+
+Every string, hit window, damage value and reaction now comes from the Storm 4 character parameter
+tables (`data/spc/<code>prm.bin.xfbin`), decoded by `tools/scripts/prm_dump.py` and baked into
+`src/combat/PrmData.ts` by `tools/scripts/gen_prm_ts.cjs`. Ultimates play the game's own `spl1`
+demo clips with their exported camera paths (`public/assets/ult`).
+
 ## Audio and VFX
 
 Sound effects are Storm 2's own, decoded from the game's nus3bank files with vgmstream

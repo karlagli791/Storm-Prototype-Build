@@ -91,6 +91,13 @@ export class FighterRig {
     this.shadow.position.y = 0.02;
     this.shadow.renderOrder = 3;
     this.root.add(this.shadow);
+    // Shadow catcher: invisible plane that only shows the sun's shadow map (the body silhouette).
+    this.catcher = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), new THREE.ShadowMaterial({ opacity: 0.42, transparent: true, depthWrite: false }));
+    this.catcher.rotation.x = -Math.PI / 2;
+    this.catcher.position.y = 0.03;
+    this.catcher.receiveShadow = true;
+    this.catcher.renderOrder = 4;
+    this.root.add(this.catcher);
   }
 
   // ------------------------------------------------------------ procedural rig
@@ -286,6 +293,7 @@ export class FighterRig {
           m.material = createCelMaterial({ albedo: color, map, rimColor: 0xffffff, skinning: (m as THREE.SkinnedMesh).isSkinnedMesh });
           m.frustumCulled = false;
           m.renderOrder = 10; // after stage shadow sheets (see ArenaEnvironment)
+          m.castShadow = true;
         }
       });
       addInvertedHull(scene, 0.012);
@@ -422,6 +430,7 @@ export class FighterRig {
 
   /** Blob drop shadow that stays on the floor while the body is in the air. */
   readonly shadow: THREE.Mesh;
+  catcher!: THREE.Mesh;
   private static shadowTex: THREE.Texture | null = null;
   private static makeShadowTex(): THREE.Texture {
     if (FighterRig.shadowTex) return FighterRig.shadowTex;
@@ -446,9 +455,10 @@ export class FighterRig {
   updateShadow(height: number): void {
     const h = Math.max(0, height);
     this.shadow.position.y = -h + 0.02;
+    this.catcher.position.y = -h + 0.03;
     const k = 1 - Math.min(0.55, h * 0.12);
-    this.shadow.scale.setScalar(k);
-    (this.shadow.material as THREE.MeshBasicMaterial).opacity = 0.9 * k;
+    this.shadow.scale.setScalar(k * 0.8);
+    (this.shadow.material as THREE.MeshBasicMaterial).opacity = 0.35 * k;
   }
 
   private awakenedVisual = false;

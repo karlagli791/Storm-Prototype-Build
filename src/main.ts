@@ -54,6 +54,7 @@ class Game implements EventSink {
   projectiles: Projectiles;
   support: SupportSystem;
   audio = new AudioManager();
+  private sun!: THREE.DirectionalLight;
   /** Exported Storm 4 ultimate camera paths, per clip name (assets/ult/<code>.json). */
   private ultCams = new Map<string, { frames: { p: number[]; q: number[]; fov: number }[] }>();
   private ultCamLoads = new Set<string>();
@@ -99,7 +100,21 @@ class Game implements EventSink {
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 0.6));
     const sun = new THREE.DirectionalLight(0xffffff, 1.0);
     sun.position.set(20, 40, 15);
+    // Projected character shadows: the sun renders a 2048 px shadow map over a 40 m window that
+    // follows the fighters; only the shadow-catcher planes receive it (the cel stage keeps its look).
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 120;
+    sun.shadow.camera.left = -22; sun.shadow.camera.right = 22;
+    sun.shadow.camera.top = 22; sun.shadow.camera.bottom = -22;
+    sun.shadow.bias = -0.0008;
+    sun.shadow.normalBias = 0.02;
+    this.sun = sun;
     this.scene.add(sun);
+    this.scene.add(sun.target);
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.buildSky();
 
     this.camera = new DualTargetCamera(window.innerWidth / window.innerHeight);
@@ -549,6 +564,10 @@ class Game implements EventSink {
       f.rig.updateShadow(f.rig.root.position.y - f.groundY);
       if (!this.paused) f.rig.advance(dt);
     }
+    // Shadow window follows the fighters
+    const mid = this.team1.active.rig.root.position.clone().lerp(this.team2.active.rig.root.position, 0.5);
+    this.sun.target.position.copy(mid);
+    this.sun.position.copy(mid).add(new THREE.Vector3(20, 40, 15));
     this.effects.update(dt);
     if (!this.applyCinematicCamera()) this.camera.update(this.team1.active.rig.root.position, this.team2.active.rig.root.position, dt);
     if (background) return;
