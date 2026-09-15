@@ -27,6 +27,9 @@ export class Fighter {
   velocity = new THREE.Vector3();
   yaw = 0;
   grounded = true;
+  /** Transform at the start of the current simulation tick (render interpolation). */
+  prevPosition = new THREE.Vector3();
+  prevYaw = 0;
 
   state: CombatState = CombatState.IDLE_NEUTRAL;
   prevState: CombatState = CombatState.IDLE_NEUTRAL;

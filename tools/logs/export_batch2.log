@@ -1,0 +1,21 @@
+=== 3mnt 19:11:09
+19:11:32 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:11:32 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:11:32 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:11:32 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:11:32 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:11:32 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/3mnt.glb 11278296
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+-rw-r--r-- 1 ysoyo 197609 11278296 Sep 14 19:12 public/assets/3mnt.glb
+=== 2kks 19:12:47
+19:13:02 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:13:02 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:13:02 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:13:02 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:13:02 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:13:02 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/2kks.glb 11275584
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+-rw-r--r-- 1 ysoyo 197609 11275584 Sep 14 19:14 public/assets/2kks.glb
+=== DONE 19:14:22

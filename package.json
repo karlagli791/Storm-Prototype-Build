@@ -1,14 +1,18 @@
 {
   "name": "storm4-proto",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "hooks": "git config core.hooksPath tools/hooks"
+    "hooks": "git config core.hooksPath tools/hooks",
+    "desktop": "vite build && electron .",
+    "desktop:dev": "cross-env STORM_DEV_URL=http://localhost:5173 electron .",
+    "dist:win": "vite build && electron-builder --win portable nsis",
+    "dist:publish": "vite build && electron-builder --win nsis --publish always"
   },
   "dependencies": {
     "three": "^0.170.0"
@@ -16,9 +20,47 @@
   "devDependencies": {
     "@types/three": "^0.170.0",
     "typescript": "^5.6.0",
-    "vite": "^6.0.0"
+    "vite": "^6.0.0",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "electron-updater": "^6.3.9",
+    "cross-env": "^7.0.3"
   },
   "allowScripts": {
-    "esbuild@0.25.12": true
+    "esbuild@0.25.12": true,
+    "electron@33.4.11": true
+  },
+  "description": "STORM Prototype Build - Naruto Storm style arena fighter on real CC2 assets",
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "com.stormprototype.build",
+    "productName": "STORM Prototype Build",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ],
+      "artifactName": "StormPrototypeBuild-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "karlagli791",
+        "repo": "Storm-Prototype-Build"
+      }
+    ]
   }
 }

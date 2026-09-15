@@ -124,11 +124,19 @@ export class ArenaEnvironment {
           const cz = (b.min.z + b.max.z) * 0.5;
           const r = Math.hypot(cx, cz);
           const tall = b.max.y - b.min.y > 2.5;
+          // Environment rings / domes (mountains, tree lines, sky) are centred on the origin too but
+          // span the whole map; only compact meshes are collapsed props.
+          const wide = Math.max(b.max.x - b.min.x, b.max.z - b.min.z) > 40;
           // Rooted inside the circle, or a collapsed cluster hovering right over the origin.
-          if (tall && ((r < 14 && b.min.y < 2) || r < 8)) {
+          if (tall && !wide && ((r < 14 && b.min.y < 2) || r < 8)) {
             m.visible = false;
             return;
           }
+        }
+        // Engine light-shaft placeholders ("backlight") carry no texture and would draw as black sheets.
+        if (/backlight/i.test(m.name)) {
+          m.visible = false;
+          return;
         }
         const src = (Array.isArray(m.material) ? m.material[0] : m.material) as THREE.MeshStandardMaterial;
         const map = src?.map ?? null;
@@ -159,13 +167,21 @@ export class ArenaEnvironment {
         }
         if (/light|glow|flare/i.test(texName) || /shadow|kage/i.test(texName)) {
           const additive = /light|glow|flare/i.test(texName);
-          mat.transparent = true;
           mat.depthWrite = false;
           mat.blending = additive ? THREE.AdditiveBlending : THREE.MultiplyBlending;
           // Flat: output the texture as-is (no banding).
           mat.uniforms.uLightColor.value = new THREE.Color(0, 0, 0);
           mat.uniforms.uAmbient.value = new THREE.Color(1, 1, 1);
-          m.renderOrder = 2;
+          if (additive) {
+            mat.transparent = true;
+            m.renderOrder = 2;
+          } else {
+            // Canopy / ground shadow sheets multiply what is under them. Draw them right after the
+            // stage geometry but before the fighters (rig meshes use renderOrder 10) so characters are
+            // never darkened by a sheet floating above the arena.
+            mat.transparent = false;
+            m.renderOrder = 1;
+          }
         }
         m.material = mat;
         m.frustumCulled = false;

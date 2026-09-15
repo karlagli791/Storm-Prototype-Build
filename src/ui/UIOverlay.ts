@@ -533,13 +533,14 @@ export class UIOverlay {
     const lines = controller
       ? [
           'L-stick move   ✕ jump / ninja move   ○ attack (stick or D-pad up/down + ○ = up/down branch)',
-          '△ chakra dash (hold = charged, during combo = spark, ○ then △ = turbo)   L2 guard   L2 + ○ guard break counter',
-          'L2 during hitstun = substitution   □ jutsu   R1 leader switch   Options pause   Create rematch',
+          '△ hold = chakra charge   △ + ✕ / R2 = chakra dash (hold = charged, in a combo = spark)   □ shuriken',
+          'L2 guard   L2 + ○ guard break counter   L2 in hitstun = substitution   △ + ○ jutsu   L1 / R1 support   R3 switch',
+          'Options pause   Create rematch   ESC character select',
         ]
       : [
           'WASD move   SPACE jump/ninja move   J attack (W/S + J = up/down branch)',
-          'K chakra dash (hold = charged, during combo = spark)   L guard   L+J guard break counter',
-          'I substitution (during hitstun)   U jutsu   O leader switch   F3 hitboxes   R rematch   P pause',
+          'K chakra dash (hold = charged, in a combo = spark)   N chakra charge   H shuriken   L guard   L+J guard break counter',
+          'I substitution (in hitstun)   U jutsu   Y support   O leader switch   F3 hitboxes   F4 AI   F5 stage   R rematch   P pause   ESC select',
         ];
     ctx.save();
     ctx.font = '11px "Segoe UI", system-ui, sans-serif';

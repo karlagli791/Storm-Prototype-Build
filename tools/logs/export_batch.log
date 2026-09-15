@@ -1,0 +1,59 @@
+=== 2ddr 18:58:15
+18:58:34 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+18:58:34 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+18:58:34 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+18:58:34 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+18:58:34 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+18:58:34 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/2ddr.glb 8421724
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+-rw-r--r-- 1 ysoyo 197609 8421724 Sep 14 18:59 public/assets/2ddr.glb
+=== 3mfn 18:59:07
+18:59:23 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+18:59:23 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+18:59:23 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+18:59:23 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+18:59:23 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+18:59:23 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/3mfn.glb 9087724
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+-rw-r--r-- 1 ysoyo 197609 9087724 Sep 14 19:00 public/assets/3mfn.glb
+=== 2itc 19:00:04
+19:00:22 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:00:22 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:00:22 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:00:22 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:00:22 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:00:22 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/2itc.glb 12928536
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+-rw-r--r-- 1 ysoyo 197609 12928536 Sep 14 19:01 public/assets/2itc.glb
+=== 2gar 19:01:24
+19:01:35 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:01:35 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:01:35 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:01:35 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:01:35 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:01:35 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:01:35 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/2gar.glb 10306892
+-rw-r--r-- 1 ysoyo 197609 10306892 Sep 14 19:02 public/assets/2gar.glb
+=== 3mnt 19:02:18
+Error: F-Curve 'xfbin_scene.lightdir_color[0]' already exists in this channelbag
+Traceback (most recent call last):
+RuntimeError: Error: F-Curve 'xfbin_scene.lightdir_color[0]' already exists in this channelbag
+Traceback (most recent call last):
+RuntimeError: Error: Python: Traceback (most recent call last):
+RuntimeError: Error: F-Curve 'xfbin_scene.lightdir_color[0]' already exists in this channelbag
+Error: Python: Traceback (most recent call last):
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+=== 2kks 19:02:35
+Error: F-Curve 'xfbin_scene.lightdir_color[0]' already exists in this channelbag
+Traceback (most recent call last):
+RuntimeError: Error: F-Curve 'xfbin_scene.lightdir_color[0]' already exists in this channelbag
+Traceback (most recent call last):
+RuntimeError: Error: Python: Traceback (most recent call last):
+RuntimeError: Error: F-Curve 'xfbin_scene.lightdir_color[0]' already exists in this channelbag
+Error: Python: Traceback (most recent call last):
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+=== DONE 19:02:46

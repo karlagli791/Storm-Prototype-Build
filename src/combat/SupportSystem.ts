@@ -164,7 +164,9 @@ export class SupportSystem {
       s.position.copy(enemy.position).addScaledVector(enemy.velocity, 0.25);
       s.position.y = 0;
     } else if (action === 'COMBO_JOIN' && enemy) {
-      s.position.copy(enemy.position).addScaledVector(this.tmp, -1.8);
+      // Jutsu range decides the spawn distance so the palm hitbox lands on the enemy.
+      const reach = Math.max(2.2, Math.min(6, s.def.jutsu.forwardStep * 0.55));
+      s.position.copy(enemy.position).addScaledVector(this.tmp, -reach);
       s.position.y = 0;
     }
     s.velocity.set(0, 0, 0);
@@ -176,10 +178,11 @@ export class SupportSystem {
     s.rig.root.visible = true;
     s.input.buffer.clear();
     if (!team.present.includes(s)) team.present.push(s);
-    const frames = action === 'COVER_FIRE' ? 40 : action === 'CHARGE_GUARD' ? 45 : 50;
+    const frames = action === 'COVER_FIRE' ? 40 : action === 'CHARGE_GUARD' ? 45 : action === 'COMBO_JOIN' ? s.def.jutsu.totalFrames + 12 : 50;
     if (action === 'COMBO_JOIN') {
+      // Manual assist (R1 / Y): the support appears beside the enemy and fires its jutsu, then leaves.
       s.enterState(CombatState.SUPPORT_ACT);
-      s.beginMove(s.def.neutralString.moves[0], 'NEUTRAL', 0);
+      s.beginMove(s.def.jutsu, 'NEUTRAL', 0);
     } else if (action === 'STRIKE_BACK' || action === 'DASH_CUT') {
       s.enterState(CombatState.SUPPORT_ACT);
       s.beginMove(s.def.neutralString.moves[Math.min(2, s.def.neutralString.moves.length - 1)], 'NEUTRAL', 0);

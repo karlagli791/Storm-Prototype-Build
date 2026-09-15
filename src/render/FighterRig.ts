@@ -34,6 +34,17 @@ export interface PoseContext {
 
 /** Shared CC2 common-animation bank (1cmnbod1): loaded once, retargeted per character. */
 let cmnBankPromise: Promise<THREE.AnimationClip[]> | null = null;
+const bankCache = new Map<string, Promise<THREE.AnimationClip[]>>();
+/** Clip set of another character's GLB (e.g. Indra borrows 2ssk). Cached per path. */
+function loadAnimBank(path: string): Promise<THREE.AnimationClip[]> {
+  let p = bankCache.get(path);
+  if (!p) {
+    p = new GLTFLoader().loadAsync(path).then((g) => g.animations).catch(() => []);
+    bankCache.set(path, p);
+  }
+  return p;
+}
+
 function loadCommonBank(path = 'assets/cmn_anims.glb'): Promise<THREE.AnimationClip[]> {
   if (!cmnBankPromise) {
     cmnBankPromise = (async () => {
@@ -51,7 +62,7 @@ function loadCommonBank(path = 'assets/cmn_anims.glb'): Promise<THREE.AnimationC
   return cmnBankPromise;
 }
 /** Ramp texture shared by all rigs (set from main once loaded). */
-export const RIG_RAMP: { texture: THREE.Texture | null; row: number } = { texture: null, row: 8 };
+export const RIG_RAMP: { texture: THREE.Texture | null; row: number } = { texture: null, row: 44 };
 
 export class FighterRig {
   readonly root = new THREE.Group();
@@ -266,6 +277,7 @@ export class FighterRig {
           const color = src && (src as THREE.MeshStandardMaterial).color ? (src as THREE.MeshStandardMaterial).color : new THREE.Color(this.def.color);
           m.material = createCelMaterial({ albedo: color, map, rimColor: 0xffffff, skinning: (m as THREE.SkinnedMesh).isSkinnedMesh });
           m.frustumCulled = false;
+          m.renderOrder = 10; // after stage shadow sheets (see ArenaEnvironment)
         }
       });
       addInvertedHull(scene, 0.012);
@@ -331,14 +343,16 @@ export class FighterRig {
       scene.traverse((o) => {
         if ((o as THREE.Bone).isBone) this.boneNames.add(o.name);
       });
-      // Retarget the shared bank: 1cmn00t0_* → <code>00t0_*, dropping tracks for bones this rig lacks.
+      // Retarget shared banks: <bank>00t0_* → <code>00t0_*, dropping tracks for bones this rig lacks.
       const code = this.def.code;
-      loadCommonBank().then((bank) => {
+      const retarget = (bank: THREE.AnimationClip[], from: string, rename: (n: string) => string, overwrite: boolean) => {
         for (const c of bank) {
+          const name = rename(c.name);
+          if (!overwrite && this.clips.has(name)) continue;
           const tracks: THREE.KeyframeTrack[] = [];
           for (const t of c.tracks) {
             const dot = t.name.lastIndexOf('.');
-            const node = t.name.slice(0, dot).replace(/^1cmn00t0/, `${code}00t0`);
+            const node = t.name.slice(0, dot).replace(new RegExp(`^${from}00t0`), `${code}00t0`);
             const prop = t.name.slice(dot + 1);
             if (!this.boneNames.has(node)) continue;
             if (prop === 'position' && (/trall$/i.test(node) || /^\w{4}00t0$/i.test(node))) continue;
@@ -346,9 +360,16 @@ export class FighterRig {
             nt.name = `${node}.${prop}`;
             tracks.push(nt);
           }
-          if (tracks.length) this.clips.set(c.name, new THREE.AnimationClip(c.name, c.duration, tracks));
+          if (tracks.length) this.clips.set(name, new THREE.AnimationClip(name, c.duration, tracks));
         }
-      });
+      };
+      // 1cmnbod1: damage / stagger / knockdown / wall / dodge clips shared by every character.
+      loadCommonBank().then((bank) => retarget(bank, '1cmn', (n) => n, true));
+      // Borrowed moveset (Indra ← Sasuke): "2sskcma00" becomes "9indcma00" so the state bindings resolve.
+      if (this.def.animBank && this.def.animBank !== code) {
+        const from = this.def.animBank;
+        loadAnimBank(`assets/${from}.glb`).then((bank) => retarget(bank, from, (n) => n.replace(new RegExp(`^${from}`), code), false));
+      }
       if (RIG_RAMP.texture) setRamp(scene, RIG_RAMP.texture, RIG_RAMP.row);
 
       this.root.remove(this.mannequin);
@@ -384,6 +405,15 @@ export class FighterRig {
       return;
     }
     this.poseMannequin(ctx);
+  }
+
+  /**
+   * Advance the skeletal animation by render time. Kept separate from the fixed 60 Hz tick so the
+   * mixer runs at the display's refresh rate (no 60 Hz stepping on 120/144 Hz monitors) and can be
+   * frozen during hitstop without touching the simulation.
+   */
+  advance(dt: number): void {
+    if (this.usingGlb && this.mixer && dt > 0) this.mixer.update(dt);
   }
 
   /** Resolve a clip spec against the clips actually present ({c} → character code). */
@@ -447,7 +477,7 @@ export class FighterRig {
         this.play(spec, 0.04);
       }
     }
-    this.mixer?.update(dt);
+    void dt;
   }
 
   private poseMannequin(ctx: PoseContext): void {

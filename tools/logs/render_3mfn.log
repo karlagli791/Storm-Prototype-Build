@@ -1,0 +1,14 @@
+Blender 4.5.4 LTS (hash b3efe983cc58 built 2025-10-28 14:22:47)
+Error: This slot (SCXFBIN_Scene) is not suitable for this data-block type (OB)
+Traceback (most recent call last):
+  File "C:\Users\ysoyo\OneDrive\Desktop\wan\storm4-proto\tools\scripts\render_portraits.py", line 49, in <module>
+    if slot: arm.animation_data.action_slot = slot
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Error: This slot (SCXFBIN_Scene) is not suitable for this data-block type (OB)
+
+Info: XFBIN import finished in 0.49s
+Info: XFBIN import finished in 4.04s
+Info: XFBIN import finished in 5.86s
+
+Blender quit
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB

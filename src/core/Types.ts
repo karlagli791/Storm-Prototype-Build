@@ -300,6 +300,14 @@ export interface CharacterDef {
   supportType: SupportType;
   /** HUD portrait (Storm 2 face_le texture). */
   portrait?: string;
+  /** Select screen: subtitle line, jutsu label, 128 px icon, full-body stand art, versus face. */
+  title?: string;
+  jutsuName?: string;
+  icon?: string;
+  stand?: string;
+  vsFace?: string;
+  /** Borrow another character's clip set (same CC2 body skeleton); tracks are retargeted by bone prefix. */
+  animBank?: string;
 }
 
 // ---------------------------------------------------------------------------

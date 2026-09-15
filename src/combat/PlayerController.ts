@@ -33,6 +33,8 @@ export class PlayerController {
   tick(tick: number, dt: number, cam: CameraBasis): void {
     const f = this.fighter;
     f.input.tick(tick);
+    f.prevPosition.copy(f.position);
+    f.prevYaw = f.yaw;
 
     // Hitstop (HITSTOP_*): the fighter freezes in place — no state advance, no motion, no animation.
     if (f.hitstopFrames > 0) {

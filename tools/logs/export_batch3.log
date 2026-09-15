@@ -1,0 +1,11 @@
+=== 2fou 19:14:25
+19:14:46 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:14:46 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:14:46 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:14:46 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:14:46 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+19:14:46 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/2fou.glb 13589808
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+-rw-r--r-- 1 ysoyo 197609 13589808 Sep 14 19:16 public/assets/2fou.glb
+=== DONE 19:16:57

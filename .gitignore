@@ -11,3 +11,5 @@ tools/anm_addon/
 tools/*.zip
 tools/*.pdf
 *.blend1
+release/
+tools/renders/*.png

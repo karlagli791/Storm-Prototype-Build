@@ -8,6 +8,9 @@ import { FIXED_DT, CombatState, CombatEvent, CombatEventKind, LEADER_SWITCH_COST
 import { InputManager, KeyboardInputSource, P1_BINDINGS, ScriptedInputSource } from './core/InputManager';
 import { PAD } from './core/GamepadState';
 import { NARUTO_DEF, SASUKE_DEF } from './combat/CharacterDefs';
+import { ROSTER, findCharacter } from './combat/Roster';
+import { CharacterSelect, Selection } from './ui/CharacterSelect';
+import { CharacterDef } from './core/Types';
 import { Fighter, Team, EventSink } from './combat/Fighter';
 import { CombatStateMachine } from './combat/CombatStateMachine';
 import { HitboxManager } from './combat/HitboxManager';
@@ -24,7 +27,7 @@ import { setRamp } from './render/Shaders';
 import { BALANCE, bindingFor } from './combat/StormStates';
 
 /** Stages exported from the Storm 2 data (docs/proto: sd03a Hidden Leaf Forest, sd05a Forest of Quiet Movement, sd01d Forest of Death). */
-const STAGES = [
+export const STAGES = [
   { id: 'sd03a', name: 'HIDDEN LEAF FOREST' },
   { id: 'sd05a', name: 'FOREST OF QUIET MOVEMENT' },
   { id: 'sd01d', name: 'FOREST OF DEATH' },
@@ -66,7 +69,7 @@ class Game implements EventSink {
   camBasis = { forward: new THREE.Vector3(0, 0, -1), right: new THREE.Vector3(1, 0, 0) };
   syncLog: import('./core/Types').PlayerSyncFrame[] = [];
 
-  constructor() {
+  constructor(private readonly selection: Selection) {
     const glCanvas = document.getElementById('gl') as HTMLCanvasElement;
     const hudCanvas = document.getElementById('hud') as HTMLCanvasElement;
     this.renderer = new THREE.WebGLRenderer({ canvas: glCanvas, antialias: true, powerPreference: 'high-performance' });
@@ -98,16 +101,17 @@ class Game implements EventSink {
       tex.minFilter = THREE.NearestFilter;
       tex.generateMipmaps = false;
       tex.colorSpace = THREE.NoColorSpace;
+      tex.flipY = false; // ramp rows are indexed from the top of celshade.tex, like the game
       RIG_RAMP.texture = tex;
       for (const f of this.allFighters) setRamp(f.rig.visual, tex, RIG_RAMP.row);
-      this.log('celshade ramp bound (row 8)');
+      this.log(`celshade ramp bound (row ${RIG_RAMP.row})`);
     });
 
     this.setupTeams();
     this.bindHotkeys();
     // Stage preference: Hidden Leaf Forest (sd03a, the blueprint's tournament stage), then the
     // Forest of Quiet Movement (sd05a). Override with ?stage=sd05a in the URL.
-    const wanted = new URLSearchParams(location.search).get('stage');
+    const wanted = this.selection.stage.id;
     const idx = STAGES.findIndex((st) => st.id === wanted);
     this.stageIndex = idx >= 0 ? idx : 0;
     this.loadStage(this.stageIndex);
@@ -141,14 +145,15 @@ class Game implements EventSink {
     // Player 1: human. Leader Naruto, support Sasuke.
     const kb = new KeyboardInputSource(P1_BINDINGS);
     this.p1Source = kb;
-    const p1Lead = new Fighter(NARUTO_DEF, new InputManager(kb));
-    const p1Sup = new Fighter(SASUKE_DEF, new InputManager(new ScriptedInputSource()));
+    const sel = this.selection;
+    const p1Lead = new Fighter(sel.p1.leader, new InputManager(kb));
+    const p1Sup = new Fighter(sel.p1.support, new InputManager(new ScriptedInputSource()));
     this.team1 = new Team('P1', 1, p1Lead, p1Sup, kb);
 
-    // Player 2: AI dummy. Leader Sasuke, support Naruto.
+    // Player 2: AI / training dummy with the chosen pair.
     const aiSrc = new ScriptedInputSource();
-    const p2Lead = new Fighter(SASUKE_DEF, new InputManager(aiSrc));
-    const p2Sup = new Fighter(NARUTO_DEF, new InputManager(new ScriptedInputSource()));
+    const p2Lead = new Fighter(sel.p2.leader, new InputManager(aiSrc));
+    const p2Sup = new Fighter(sel.p2.support, new InputManager(new ScriptedInputSource()));
     this.team2 = new Team('P2', 2, p2Lead, p2Sup, aiSrc);
     this.ai = new AIBrain(aiSrc, this.team2);
     // Training dummy by default: the enemy stands still until F4 (or ?ai=1) enables the AI.
@@ -253,6 +258,8 @@ class Game implements EventSink {
         e.preventDefault();
         this.ai.enabled = !this.ai.enabled;
         this.log(`AI ${this.ai.enabled ? 'enabled' : 'disabled (training dummy)'}`);
+      } else if (e.code === 'Escape') {
+        returnToSelect();
       }
     });
   }
@@ -389,8 +396,20 @@ class Game implements EventSink {
       }
     }
 
+    // Render interpolation: the sim runs at a fixed 60 Hz, the display may not. Place every rig
+    // between its previous and current tick transform by the accumulator fraction so motion is
+    // smooth at any refresh rate, and advance skeletal animation by render time (frozen in hitstop).
+    const alpha = this.paused ? 1 : Math.min(1, this.accumulator / FIXED_DT);
+    for (const f of [...this.team1.present, ...this.team2.present]) {
+      if (f.hitstopFrames > 0 || !f.rig.root.visible) continue;
+      f.rig.root.position.lerpVectors(f.prevPosition, f.position, alpha);
+      let dy = f.yaw - f.prevYaw;
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      f.rig.root.rotation.y = f.prevYaw + dy * alpha;
+      if (!this.paused) f.rig.advance(dt);
+    }
     this.effects.update(dt);
-    this.camera.update(this.team1.active.position, this.team2.active.position, dt);
+    this.camera.update(this.team1.active.rig.root.position, this.team2.active.rig.root.position, dt);
     if (background) return;
     this.renderer.render(this.scene, this.camera.camera);
     this.hud.draw(this.hudData(), dt);
@@ -450,4 +469,39 @@ declare global {
   }
 }
 
-window.storm = new Game();
+/** Battle setup lives in the URL (?p1=2nrt,2ssk&p2=2kks,2gar&stage=sd03a) so a reload rematches. */
+function selectionFromUrl(): Selection | null {
+  const q = new URLSearchParams(location.search);
+  const pair = (v: string | null) => {
+    const [a, b] = (v ?? '').split(',');
+    const lead = findCharacter(a), sup = findCharacter(b);
+    return lead && sup ? { leader: lead, support: sup } : null;
+  };
+  const p1 = pair(q.get('p1')), p2 = pair(q.get('p2'));
+  const stage = STAGES.find((st) => st.id === q.get('stage')) ?? STAGES[0];
+  if (p1 && p2) return { p1, p2, stage };
+  return null;
+}
+
+function returnToSelect(): void {
+  const q = new URLSearchParams(location.search);
+  q.delete('p1'); q.delete('p2'); q.delete('stage');
+  location.href = `${location.pathname}${q.toString() ? '?' + q.toString() : ''}`;
+}
+
+async function boot(): Promise<void> {
+  let sel = selectionFromUrl();
+  if (!sel) {
+    const boot = document.getElementById('boot');
+    if (boot) boot.remove();
+    sel = await new CharacterSelect(ROSTER, STAGES).run();
+    const q = new URLSearchParams(location.search);
+    q.set('p1', `${sel.p1.leader.code},${sel.p1.support.code}`);
+    q.set('p2', `${sel.p2.leader.code},${sel.p2.support.code}`);
+    q.set('stage', sel.stage.id);
+    history.replaceState(null, '', `${location.pathname}?${q.toString()}`);
+  }
+  window.storm = new Game(sel);
+}
+void NARUTO_DEF; void SASUKE_DEF; void (null as unknown as CharacterDef);
+boot();
