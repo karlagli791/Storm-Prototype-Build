@@ -217,3 +217,4 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 - 2026-09-15 04:13 — Version 0.3.0
 - 2026-09-15 04:44 — Playtest fixes: ninja-move chain lock, normal fall clips, closer camera, full-map traversal, drop shadows, terrain shading, projectile jutsu, ultimate cinematics from the Storm 4 camera paths
 - 2026-09-15 05:01 — Real Storm 4 frame data (prm.bin motion/hit tables) drives every moveset; ultimate cinematics with exported camera paths; projected shadows; playtest fixes; prototype memory-layout notes
+- 2026-09-15 05:04 — Version 0.4.0
