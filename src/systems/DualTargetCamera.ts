@@ -33,17 +33,27 @@ export const CAMERA_PARAMS = {
   LOOK_LAMBDA: 14.0,
   // Storm behind-the-shoulder framing: the camera sits behind and slightly beside the player,
   // pulls back as the fighters separate, and looks at a point weighted toward the enemy.
-  BACK_MIN: 2.6,
-  BACK_K: 0.2,
-  BACK_MAX: 7.0,
-  SIDE: 1.15,
-  UP_MIN: 1.45,
-  UP_K: 0.09,
-  UP_MAX: 3.0,
-  LOOK_MIX: 0.34,
+  BACK_MIN: 2.15,
+  BACK_K: 0.18,
+  BACK_MAX: 6.5,
+  SIDE: 1.0,
+  UP_MIN: 1.3,
+  UP_K: 0.08,
+  UP_MAX: 2.8,
+  LOOK_MIX: 0.36,
   LOOK_UP: 1.0,
-  FOV_MIN: 42,
-  FOV_MAX: 56,
+  FOV_MIN: 40,
+  FOV_MAX: 54,
+  // Combo camera: while a string connects the view swings to the side (2D-fighter framing) and
+  // pushes in slowly; it eases back out when the exchange ends.
+  COMBO_DIST: 4.4,
+  COMBO_PUSH: 0.35,
+  COMBO_MIN_DIST: 3.2,
+  COMBO_UP: 1.25,
+  COMBO_FOV: 44,
+  // Chakra dash: the camera tucks in behind the dasher and the lens widens for speed.
+  DASH_BACK: 0.5,
+  DASH_FOV: 9,
 };
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -60,6 +70,16 @@ export class DualTargetCamera {
 
   /** Playable radius of the current stage (set by the game after a stage loads). */
   arenaRadius = ARENA_RADIUS;
+  /** 1 while P1 is chakra-dashing (set by the game). */
+  dashTarget = 0;
+  private dashWeight = 0;
+  /** Combo camera weight target (0 = normal orbit, 1 = side view), smoothed in update(). */
+  comboTarget = 0;
+  private comboWeight = 0;
+  private comboTime = 0;
+  private comboSide = 1;
+  private cCombo = new THREE.Vector3();
+  private lookCombo = new THREE.Vector3();
 
   /** Screen shake state. */
   private shakeAmp = 0;
@@ -130,6 +150,30 @@ export class DualTargetCamera {
     this.pMid.copy(p1).lerp(p2, P.LOOK_MIX);
     this.pMid.y += P.LOOK_UP;
 
+    // Dash push-in
+    this.dashWeight += (this.dashTarget - this.dashWeight) * Math.min(1, (this.dashTarget > this.dashWeight ? 7 : 3) * dt);
+    this.cTarget.addScaledVector(this.uSep, P.DASH_BACK * this.dashWeight);
+
+    // Combo camera blend
+    const rateIn = 5.0, rateOut = 2.2;
+    const wPrev = this.comboWeight;
+    this.comboWeight += (this.comboTarget - this.comboWeight) * Math.min(1, (this.comboTarget > this.comboWeight ? rateIn : rateOut) * dt);
+    if (this.comboTarget > 0.5) this.comboTime += dt; else this.comboTime = Math.max(0, this.comboTime - dt * 2);
+    if (wPrev < 0.02 && this.comboWeight >= 0.02) {
+      // pick the side that keeps the camera closest to where it already is
+      this.comboSide = this.nLat.dot(this.tmp.subVectors(this.position, this.pMid)) >= 0 ? 1 : -1;
+    }
+    if (this.comboWeight > 0.001) {
+      const dist = Math.max(P.COMBO_MIN_DIST, P.COMBO_DIST - P.COMBO_PUSH * this.comboTime + d * 0.35);
+      this.lookCombo.addVectors(p1, p2).multiplyScalar(0.5);
+      this.lookCombo.y = Math.max(p1.y, p2.y) * 0.5 + Math.min(p1.y, p2.y) * 0.5 + P.COMBO_UP * 0.8;
+      this.cCombo.copy(this.lookCombo).addScaledVector(this.nLat, dist * this.comboSide / this.side);
+      this.cCombo.y = this.lookCombo.y + P.COMBO_UP * 0.5;
+      const w = this.comboWeight * this.comboWeight * (3 - 2 * this.comboWeight);
+      this.cTarget.lerp(this.cCombo, w);
+      this.pMid.lerp(this.lookCombo, w);
+    }
+
     // Keep the camera inside the arena ceiling/walls with a soft margin so it never clips the cylinder.
     const rxz = Math.hypot(this.cTarget.x, this.cTarget.z);
     const maxR = this.arenaRadius + 6.0;
@@ -171,7 +215,8 @@ export class DualTargetCamera {
     this.camera.lookAt(this.lookAt);
 
     // Field of view widens slightly as fighters separate, tightening framing in close range.
-    const fov = clamp(P.FOV_MIN + d * 0.5, P.FOV_MIN, P.FOV_MAX);
+    const fovN = clamp(P.FOV_MIN + d * 0.5, P.FOV_MIN, P.FOV_MAX);
+    const fov = fovN + (P.COMBO_FOV - fovN) * this.comboWeight + P.DASH_FOV * this.dashWeight;
     if (Math.abs(this.camera.fov - fov) > 0.01) {
       this.camera.fov = fov;
       this.camera.updateProjectionMatrix();

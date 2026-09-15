@@ -76,6 +76,11 @@ class Game implements EventSink {
 
   tick = 0;
   accumulator = 0;
+  /** KO camera: seconds left of the slow-motion orbit on the loser. */
+  koTimer = 0;
+  private koAngle = 0;
+  private koLoser: Fighter | null = null;
+  private koM = new THREE.Matrix4();
   lastTime = performance.now();
   roundTime = ROUND_SECONDS;
   paused = false;
@@ -126,6 +131,7 @@ class Game implements EventSink {
     this.scene.add(this.projectiles.group);
     this.support = new SupportSystem(this.fsm, this.projectiles, this.effects, this);
     this.fsm.projectiles = this.projectiles;
+    this.fsm.hasCinematicCam = (clip) => this.ultCams.has(clip);
 
     // CC2 celshade ramp (system/celshade.tex, row 8 = three-band character ramp)
     new THREE.TextureLoader().load('assets/ui/celshade_ramp.png', (tex) => {
@@ -324,10 +330,12 @@ class Game implements EventSink {
         const blade = who?.def.hasBlade;
         this.audio.play(blade ? 'sword_hit' : heavy ? (Math.random() < 0.5 ? 'kick_hit2' : 'punch_hit2') : Math.random() < 0.5 ? 'punch_hit1' : 'kick_hit1', { pitchVar: 0.06 });
         if (heavy) this.audio.play('hit_S', { volume: 0.6 });
+        const victim = this.allFighters.find((f) => f.id === data.defenderId);
+        if (victim) this.audio.voice(victim.def.code === '9ind' ? '2ssk' : victim.def.code, (data.damage ?? 0) >= 150 ? 'dmgL_02' : heavy ? 'dmgM_02' : 'dmgS_02', { volume: 0.8 });
         break;
       }
       case 'GUARD_HIT': this.audio.play('guard', { pitchVar: 0.05 }); break;
-      case 'GUARD_BREAK': this.audio.play('exp1', { volume: 0.9 }); break;
+      case 'GUARD_BREAK': { this.audio.play('exp1', { volume: 0.9 }); const vv = this.allFighters.find((f) => f.id === data.defenderId); if (vv) this.audio.voice(vv.def.code, 'grdBrk_02'); break; }
       case 'PARRY': this.audio.play('flash2'); break;
       case 'CLASH': this.audio.play('chakHit'); break;
       case 'SUB': this.audio.play('change'); break;
@@ -335,9 +343,16 @@ class Game implements EventSink {
       case 'WALL_SPLAT': this.audio.play('groundHit2'); break;
       case 'SWITCH': this.audio.play(data.text?.includes('SUPPORT') ? 'cutin_support' : 'change'); break;
       case 'SFX': if (data.text) this.audio.play(data.text, { volume: 0.7, pitchVar: 0.05 }); break;
+      case 'JUTSU': {
+        // Jutsu demo: name toast on the way in, flash + jutsu sound on the finishing blow.
+        if ((data.damage ?? 0) > 0) { screenFlash(); this.audio.play('exp1', { volume: 0.8 }); this.audio.play(who?.def.jutsuSfx ?? 'rasen', { volume: 0.8 }); }
+        else { this.hud.showToast(who?.def.jutsuName ?? 'JUTSU', '#bfe8ff', 1.0); this.audio.play('flash', { volume: 0.6 }); }
+        break;
+      }
       case 'ULTIMATE': {
         if ((data.damage ?? 0) > 0) {
           screenFlash();
+          bgm.setMusicVolume(0.08); setTimeout(() => bgm.setMusicVolume(0.22), 6500);
           this.audio.play('exp2');
           this.audio.play(who?.def.ultimateSfx ?? 'raikiriHit', { volume: 0.9 });
           this.hud.showToast(who?.def.ultimateName ?? 'ULTIMATE', '#ffd166', 1.2);
@@ -364,7 +379,7 @@ class Game implements EventSink {
       const bank = f.def.animBank ?? f.def.code;
       if (this.ultCamLoads.has(bank)) continue;
       this.ultCamLoads.add(bank);
-      fetch(`assets/ult/${bank}.json`).then((r) => (r.ok ? r.json() : null)).then((j) => {
+      for (const file of [`assets/ult/${bank}.json`, `assets/ult/${bank}_skl.json`]) fetch(file).then((r) => (r.ok ? r.json() : null)).then((j) => {
         if (!j) return;
         for (const [clip, data] of Object.entries(j as Record<string, { frames: { p: number[]; q: number[]; fov: number }[] }>)) {
           // Indra borrows Sasuke's clips under his own code
@@ -377,7 +392,7 @@ class Game implements EventSink {
 
   /** While a cinematic finisher plays, drive the camera from the exported path (30 fps data). */
   private applyCinematicCamera(): boolean {
-    const f = [this.team1.active, this.team2.active].find((x) => x.state === CombatState.ULTIMATE && x.cinematic && x.currentMove);
+    const f = [this.team1.active, this.team2.active].find((x) => (x.state === CombatState.ULTIMATE || x.state === CombatState.JUTSU) && x.cinematic && x.currentMove);
     if (!f) { this.setLetterbox(false); return false; }
     const data = this.ultCams.get(f.currentMove!.clip);
     const glb = f.rig.glbRoot;
@@ -390,6 +405,21 @@ class Game implements EventSink {
     this.camQ.set(k.q[0], k.q[1], k.q[2], k.q[3]).premultiply(this.camGQ);
     this.camera.override(this.camP, this.camQ, k.fov);
     this.setLetterbox(true);
+    return true;
+  }
+
+  /** KO camera: a slow orbit that pushes in on the loser while the sim runs in slow motion. */
+  private applyKoCamera(dt: number): boolean {
+    const l = this.koLoser;
+    if (this.koTimer <= 0 || !l) return false;
+    const t = 1 - Math.max(0, this.koTimer) / 2.6;
+    this.koAngle += dt * 0.55;
+    const r = 3.6 - 1.2 * t;
+    const c = l.rig.root.position;
+    this.camP.set(c.x + Math.sin(this.koAngle) * r, c.y + 1.7 - 0.5 * t, c.z + Math.cos(this.koAngle) * r);
+    this.koM.lookAt(this.camP, new THREE.Vector3(c.x, c.y + 0.9, c.z), new THREE.Vector3(0, 1, 0));
+    this.camQ.setFromRotationMatrix(this.koM);
+    this.camera.override(this.camP, this.camQ, 36 - 4 * t);
     return true;
   }
 
@@ -415,19 +445,24 @@ class Game implements EventSink {
       const prev = this.prevStates.get(f.id);
       if (prev === f.state) continue;
       this.prevStates.set(f.id, f.state);
+      const code = f.def.animBank && !f.def.jutsuSfx ? f.def.animBank : f.def.code;
+      const v = (cue: string) => this.audio.voice(code === '9ind' ? '2ssk' : code, cue, { volume: 0.85 });
       switch (f.state) {
-        case CombatState.DASH_STARTUP: this.audio.play('dash', { volume: 0.7 }); break;
+        case CombatState.DASH_STARTUP: this.audio.play('dash', { volume: 0.7 }); v('ckrDash_01'); break;
         case CombatState.JUMPING: if (prev !== CombatState.COMBO_STRING && prev !== CombatState.JUTSU) this.audio.play('jump1', { volume: 0.6 }); break;
         case CombatState.NINJA_MOVE:
-        case CombatState.HOLLOW_STEP: this.audio.play('jump2', { volume: 0.5 }); break;
+        case CombatState.HOLLOW_STEP: this.audio.play('jump2', { volume: 0.5 }); if (Math.random() < 0.35) v('ninjaMove_02'); break;
         case CombatState.IDLE_NEUTRAL:
         case CombatState.RUNNING: if (prev === CombatState.JUMPING || prev === CombatState.NINJA_MOVE) this.audio.play('landing', { volume: 0.5 }); break;
-        case CombatState.JUTSU: this.audio.play(f.def.jutsuSfx ?? 'rasen', { volume: 0.9 }); break;
-        case CombatState.THROW: this.audio.play('shuriken', { volume: 0.7 }); break;
-        case CombatState.CHAKRA_CHARGE: this.audio.play('charge', { volume: 0.6 }); break;
-        case CombatState.COMBO_STRING: this.audio.play(f.def.hasBlade ? 'sword_swing' : 'punch_swing', { volume: 0.45, pitchVar: 0.08 }); break;
+        case CombatState.JUTSU: this.audio.play(f.def.jutsuSfx ?? 'rasen', { volume: 0.9 }); v('skill01_01'); break;
+        case CombatState.THROW: this.audio.play('shuriken', { volume: 0.7 }); if (Math.random() < 0.5) v('throw'); break;
+        case CombatState.CHAKRA_CHARGE: this.audio.play('charge', { volume: 0.6 }); v('ckrCharge_01'); break;
+        case CombatState.COMBO_STRING: this.audio.play(f.def.hasBlade ? 'sword_swing' : 'punch_swing', { volume: 0.45, pitchVar: 0.08 }); v(f.comboBranch === 'AIR' ? 'atkM_02' : 'atkS_02'); break;
+        case CombatState.ULTIMATE: v('ougi_01_01'); break;
+        case CombatState.AWAKEN: v('powerUP'); break;
+        case CombatState.SUBSTITUTED: v('change_02'); break;
         case CombatState.KNOCKDOWN: this.audio.play('down', { volume: 0.6 }); break;
-        case CombatState.DEAD: this.audio.play('ko'); break;
+        case CombatState.DEAD: this.audio.play('ko'); v('dmgLose'); bgm.setMusicVolume(0.1); break;
         case CombatState.INTRO: if (f.team === this.team1) this.audio.play('battleStart'); break;
       }
     }
@@ -515,7 +550,11 @@ class Game implements EventSink {
       else if (this.roundTime <= 0) {
         this.winner = this.team1.stats.health >= this.team2.stats.health ? this.team1.active.def.displayName : this.team2.active.def.displayName;
       }
-      if (this.winner) this.log(`${this.winner} WINS`);
+      if (this.winner) {
+        this.log(`${this.winner} WINS`);
+        const loserTeam = this.team1.stats.isDead ? this.team1 : this.team2.stats.isDead ? this.team2 : null;
+        if (loserTeam) { this.koLoser = loserTeam.active; this.koTimer = 2.6; this.koAngle = this.koLoser.yaw + Math.PI * 0.75; }
+      }
     }
 
     // StormRevival-style sync frames (ring of the last 120 ticks)
@@ -540,8 +579,11 @@ class Game implements EventSink {
       this.hud.showToast('REMATCH', '#ffffff', 0.8);
     }
 
+    // KO: the last blow plays out in slow motion while the camera circles the loser.
+    const timeScale = this.koTimer > 0 ? 0.32 : 1;
+    if (this.koTimer > 0) this.koTimer -= dt;
     if (!this.paused) {
-      this.accumulator += dt;
+      this.accumulator += dt * timeScale;
       let steps = 0;
       while (this.accumulator >= FIXED_DT && steps < 6) {
         this.step(FIXED_DT);
@@ -562,14 +604,20 @@ class Game implements EventSink {
       dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       f.rig.root.rotation.y = f.prevYaw + dy * alpha;
       f.rig.updateShadow(f.rig.root.position.y - f.groundY);
-      if (!this.paused) f.rig.advance(dt);
+      if (!this.paused) f.rig.advance(dt * timeScale);
     }
+    // Combo camera: a landed string on either side swings the view to the side and pushes in.
+    const hitStates = new Set([CombatState.HITSTUN, CombatState.LAUNCHED, CombatState.TUMBLE, CombatState.CRUMPLE, CombatState.BLOCKSTUN]);
+    const a1 = this.team1.active, a2 = this.team2.active;
+    const stringOn = (a: Fighter, v: Fighter) => (a.state === CombatState.COMBO_STRING || a.state === CombatState.JUTSU) && (hitStates.has(v.state) || v.tetherFrames > 0);
+    this.camera.comboTarget = stringOn(a1, a2) || stringOn(a2, a1) ? 1 : 0;
     // Shadow window follows the fighters
     const mid = this.team1.active.rig.root.position.clone().lerp(this.team2.active.rig.root.position, 0.5);
     this.sun.target.position.copy(mid);
     this.sun.position.copy(mid).add(new THREE.Vector3(20, 40, 15));
     this.effects.update(dt);
-    if (!this.applyCinematicCamera()) this.camera.update(this.team1.active.rig.root.position, this.team2.active.rig.root.position, dt);
+    this.camera.dashTarget = a1.state === CombatState.DASH_HOMING || a1.state === CombatState.DASH_STARTUP || a1.state === CombatState.SPARK_DASH ? 1 : 0;
+    if (!this.applyKoCamera(dt) && !this.applyCinematicCamera()) this.camera.update(this.team1.active.rig.root.position, this.team2.active.rig.root.position, dt);
     if (background) return;
     this.renderer.render(this.scene, this.camera.camera);
     this.hud.draw(this.hudData(), dt);
@@ -651,8 +699,11 @@ function returnToSelect(): void {
   location.href = `${location.pathname}${q.toString() ? '?' + q.toString() : ''}`;
 }
 
+/** Storm 2 title theme (decoded from adx2/PC/BGM_TITLE.awb): select screen loud, battle quieter. */
+const bgm = new AudioManager();
 async function boot(): Promise<void> {
   let sel = selectionFromUrl();
+  bgm.playLoop('title', sel ? 0.22 : 0.4, 2.7);
   if (!sel) {
     const boot = document.getElementById('boot');
     if (boot) boot.remove();

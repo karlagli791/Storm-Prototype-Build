@@ -30,7 +30,7 @@ npm run build      # type-check + production bundle in dist/
 | M, or U with ≥90% chakra | Triangle + Circle with a full gauge | **Ultimate Jutsu**: cut-in, armored homing rush, big finisher (empties the gauge) |
 | Space in the air | Cross in the air | **Double jump**; with a direction = **air ninja move** |
 | J in the air | Circle in the air | **Air string** (3 hits, the last spikes the enemy down) |
-| H | Square / X | **Shuriken** throw (3% chakra, guardable, parryable, dashes pierce it) |
+| H | Square / X | **Shuriken** throw (3% chakra, guardable, parryable, dashes pierce it); also in the air and out of a ninja-move hop (cancels the hop) |
 | Y | L1 / R1 | **Support call** (50% support gauge): the bench fighter runs in for a combo join. Automatic interventions: Balance = Cover Fire, Guard = Dash Cut / Charge Guard, Attack = Strike Back |
 | L / Shift | L2 / L1 | Guard (guard sphere, durability 100, blue → yellow → red) |
 | L + J | L2 + Circle | **Guard Break Counter** (frames 2–7 parry, costs 20% of max chakra for 20 s) |
@@ -169,6 +169,13 @@ Every string, hit window, damage value and reaction now comes from the Storm 4 c
 tables (`data/spc/<code>prm.bin.xfbin`), decoded by `tools/scripts/prm_dump.py` and baked into
 `src/combat/PrmData.ts` by `tools/scripts/gen_prm_ts.cjs`. Ultimates play the game's own `spl1`
 demo clips with their exported camera paths (`public/assets/ult`).
+
+## Cameras
+
+Behind-the-shoulder Storm framing, a combo camera that swings to a side view and pushes in while a
+string connects, a dash push-in, a KO slow-motion orbit, and cinematic overrides that play the
+game's own camera paths for ultimates (`spl1_atk`) and connecting jutsu (`skl1_atk`), exported by
+`tools/scripts/export_ult_cams.sh` / `export_skl_cams.sh`.
 
 ## Audio and VFX
 

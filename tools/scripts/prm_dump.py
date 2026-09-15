@@ -32,10 +32,15 @@ for code in sys.argv[2:]:
         cancel = cstr(d[a + 116:a + 148])
         region = d[a + 212:end]
         hits = []
-        for m in re.finditer(rb'[0-9a-zA-Z]{4}0[0-9]t0[ \w]*\x00', region):
-            hs = m.start() - 64
-            if hs < 0 or hs + 288 > len(region): continue
+        # A hit record is located by its DAMAGE_ID string (@128): the bone (@64) can be a body bone
+        # ('2nrt00t0 r hand'), a weapon bone ('ksng_under', 'trall') or an effect dummy ('1efc_dmy01_01').
+        seen = set()
+        for m in re.finditer(rb'(DAMAGE_ID_|DMG_|DAMAGE_)[A-Za-z0-9_]+\x00', region):
+            hs = m.start() - 128
+            if hs < 0 or hs + 288 > len(region) or hs in seen: continue
+            seen.add(hs)
             h = region[hs:hs + 288]
+            if not re.match(rb'[ -~]{2,}\x00', h[64:128]): continue  # no bone name = not a hit box
             s = list(struct.unpack('<8H', h[32:48])); t = list(struct.unpack('<8H', h[96:112]))
             f = [round(x, 3) for x in struct.unpack('<8f', h[192:224])]
             hits.append({'bone': cstr(h[64:128]), 'dmgId': cstr(h[128:192]), 'order': s[0], 'flags': s[1], 'start': t[0], 'damage': t[2], 'radius': f[2], 'power': f[4], 'scale': f[5]})

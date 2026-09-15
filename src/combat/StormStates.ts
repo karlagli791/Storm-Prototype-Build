@@ -36,6 +36,8 @@ export interface ClipContext {
   hitDir: HitDir;
   airborne: boolean;
   airDash?: boolean;
+  /** Side throw out of a ninja move: 'L' | 'R' picks the PRJ_DL / PRJ_DR clip. */
+  throwDir?: HitDir | null;
   awakened?: boolean;
   falling: boolean;
   stateFrame: number;
@@ -66,7 +68,7 @@ export function bindingFor(state: CombatState, ctx: ClipContext): StateBinding {
       };
     case CombatState.JUMPING:
       if (ctx.airDash)
-        return { act: 'PL_ACT_NMOVE_SIDE', anm: 'PL_ANM_DSH_' + ctx.moveDir, clips: [O(dirClip('{c}', ctx.moveDir, { F: 'dsf0', B: 'dsb0', L: 'dsl0', R: 'dsr0' })), L('{c}jmp1')] };
+        return { act: 'PL_ACT_NMOVE_SIDE', anm: 'PL_ANM_DSH_' + ctx.moveDir, clips: [O(dirClip('{c}', ctx.moveDir, { F: 'dsf0', B: 'dsb0', L: 'dsl0', R: 'dsr0' }), '{c}jmp1'), L('{c}jmp1')] };
       // jmp0 = take-off (one shot) → jmp1 = airborne loop. The common bank's fal0/fal1 are
       // *damage* falls (arms flailing) and are only used by LAUNCHED.
       return ctx.falling
@@ -93,7 +95,11 @@ export function bindingFor(state: CombatState, ctx: ClipContext): StateBinding {
         clips: ctx.moveClip ? [O(ctx.moveClip, ctx.moveClip.replace(/_s(\d?)$/, '_l$1')), O('{c}skl1_s1', '{c}skl1_l1'), O('{c}skl1_s', '{c}sklchg_l')] : [O('{c}skl1_s1', '{c}skl1_l1')],
       };
     case CombatState.THROW:
-      return { act: 'PL_ACT_PRJ_LAND', anm: 'PL_ANM_PRJ_LAND', clips: [O('{c}cma00'), O('{c}nut0')] };
+      if (ctx.throwDir === 'L' || ctx.throwDir === 'R')
+        return { act: 'PL_ACT_PRJ_D' + ctx.throwDir, anm: 'PL_ANM_PRJ_D' + ctx.throwDir, clips: [O(ctx.throwDir === 'L' ? '{c}itl0' : '{c}itr0', '{c}jmp1'), O('{c}itma0', '{c}jmp1'), O('{c}itmg0', '{c}jmp1'), L('{c}jmp1')] };
+      return ctx.airborne
+        ? { act: 'PL_ACT_PRJ_AIR', anm: 'PL_ANM_PRJ_AIR', clips: [O('{c}itma0', '{c}jmp1'), O('{c}itmg0', '{c}jmp1'), L('{c}jmp1')] }
+        : { act: 'PL_ACT_PRJ_LAND', anm: 'PL_ANM_PRJ_LAND', clips: [O('{c}itmg0', '{c}nut0'), O('{c}cmr00', '{c}nut0'), O('{c}nut0')] };
     case CombatState.CHAKRA_CHARGE:
       return { act: 'PL_ACT_CHAKRA_CHARGE', anm: 'PL_ANM_SKILL_CHARGE_LOOP', clips: [O('{c}sklchg_s', '{c}sklchg_l'), L('{c}sklchg_l'), L('{c}hola0'), L('{c}nut0')] };
     case CombatState.GUARDING:

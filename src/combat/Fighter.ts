@@ -44,6 +44,11 @@ export class Fighter {
   ultimateLanded = false;
   /** Cinematic finisher clip in progress (camera path + held victim). */
   cinematic = false;
+  /** The jutsu demo already played this activation (one per jutsu). */
+  jutsuDemoDone = false;
+  /** Combo tether: held in the attacker's string until it ends (id of the attacker, frames left). */
+  tetherBy = 0;
+  tetherFrames = 0;
 
   state: CombatState = CombatState.IDLE_NEUTRAL;
   prevState: CombatState = CombatState.IDLE_NEUTRAL;
@@ -102,6 +107,8 @@ export class Fighter {
   supportRequested = false;
   /** Set on the throw's release frame; the game loop spawns the shuriken. */
   throwRequested = false;
+  /** Side of a throw started out of a ninja move (PRJ_DL / PRJ_DR clips); null = neutral throw. */
+  throwDir: HitDir | null = null;
 
   constructor(public readonly def: CharacterDef, public input: InputManager) {
     this.rig = new FighterRig(def);

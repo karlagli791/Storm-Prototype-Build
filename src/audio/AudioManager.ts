@@ -17,7 +17,8 @@ export class AudioManager {
   constructor(private base = 'assets/sfx/') {
     const unlock = () => {
       this.ensure();
-      if (this.ctx && this.ctx.state === 'suspended') void this.ctx.resume();
+      if (this.ctx && this.ctx.state === 'suspended') void this.ctx.resume().then(() => this.tryStartLoop());
+      else this.tryStartLoop();
     };
     window.addEventListener('keydown', unlock);
     window.addEventListener('pointerdown', unlock);
@@ -42,7 +43,7 @@ export class AudioManager {
     for (const n of names) void this.load(n);
   }
 
-  private load(name: string): Promise<AudioBuffer | null> {
+  private load(name: string, ext = 'wav'): Promise<AudioBuffer | null> {
     const hit = this.buffers.get(name);
     if (hit) return Promise.resolve(hit);
     let p = this.loading.get(name);
@@ -51,7 +52,7 @@ export class AudioManager {
       const ctx = this.ensure();
       if (!ctx) return null;
       try {
-        const res = await fetch(`${this.base}${name}.wav`);
+        const res = await fetch(`${this.base}${name}.${ext}`);
         if (!res.ok) return null;
         const buf = await ctx.decodeAudioData(await res.arrayBuffer());
         this.buffers.set(name, buf);
@@ -84,6 +85,66 @@ export class AudioManager {
       src.connect(g).connect(this.master);
       src.start();
     });
+  }
+
+  private lastVoice = new Map<string, number>();
+  /** Character voice line: assets/voice/<code>/<cue>.wav, one per character every 250 ms. */
+  voice(code: string, cue: string, opts: SfxOptions = {}): void {
+    const now = performance.now();
+    if (now - (this.lastVoice.get(code) ?? -1e9) < 250) return;
+    this.lastVoice.set(code, now);
+    this.play(`../voice/${code}/${cue}`, { volume: 0.9, ...opts });
+  }
+
+  // --- music -------------------------------------------------------------------------------
+  private loopSrc: AudioBufferSourceNode | null = null;
+  private loopGain: GainNode | null = null;
+  private pendingLoop: { name: string; volume: number; loopStart: number } | null = null;
+
+  /** Looping music track (assets/bgm/<name>.ogg). Starts as soon as the context is unlocked. */
+  playLoop(name: string, volume = 0.35, loopStart = 0): void {
+    if (this.pendingLoop?.name === name && this.loopSrc) { if (this.loopGain) this.loopGain.gain.value = volume; return; }
+    this.stopLoop(0.4);
+    this.pendingLoop = { name, volume, loopStart };
+    this.tryStartLoop();
+  }
+
+  private tryStartLoop(): void {
+    const ctx = this.ensure();
+    const p = this.pendingLoop;
+    if (!ctx || !p || this.loopSrc || ctx.state !== 'running') return;
+    void this.load(`../bgm/${p.name}`, 'ogg').then((buf) => {
+      if (!buf || this.loopSrc || !this.ctx || !this.master || this.pendingLoop !== p) return;
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      src.loopStart = Math.min(p.loopStart, buf.duration - 1);
+      src.loopEnd = buf.duration;
+      const g = this.ctx.createGain();
+      g.gain.value = this.muted ? 0 : p.volume;
+      src.connect(g).connect(this.master);
+      src.start();
+      this.loopSrc = src;
+      this.loopGain = g;
+    });
+  }
+
+  /** Fade the music out over `fade` seconds. */
+  stopLoop(fade = 0.6): void {
+    this.pendingLoop = null;
+    const src = this.loopSrc, g = this.loopGain, ctx = this.ctx;
+    this.loopSrc = null; this.loopGain = null;
+    if (!src || !g || !ctx) return;
+    const t = ctx.currentTime;
+    g.gain.setValueAtTime(g.gain.value, t);
+    g.gain.linearRampToValueAtTime(0, t + fade);
+    src.stop(t + fade + 0.05);
+  }
+
+  /** Music level (0–1) without restarting the track. */
+  setMusicVolume(v: number): void {
+    if (this.pendingLoop) this.pendingLoop.volume = v;
+    if (this.loopGain && this.ctx) this.loopGain.gain.linearRampToValueAtTime(v, this.ctx.currentTime + 0.3);
   }
 
   setVolume(v: number): void {

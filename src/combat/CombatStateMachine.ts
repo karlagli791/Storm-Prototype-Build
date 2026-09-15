@@ -60,6 +60,8 @@ const DASH_IMPACT_FRAMES = 8;
 const DASH_REBOUND_FRAMES = 16;
 const NINJA_MOVE_FRAMES = 16;
 const JUTSU_COST = 30;
+/** Damage dealt by the jutsu demo finish (the palm hit that starts it deals its own). */
+const JUTSU_DEMO_DAMAGE = 140;
 /** SPSKILL: needs a nearly full gauge (retail: 2nd ultimate consumes 66) and empties it. */
 const ULTIMATE_MIN_CHAKRA = 90;
 const ULTIMATE_TOTAL = 150;
@@ -191,7 +193,8 @@ export class CombatStateMachine {
 
   /** PL_ACT_PRJ_LAND: shuriken throw. The projectile is spawned by the game loop at the release frame. */
   private updateThrow(f: Fighter, dt: number): void {
-    this.applyFriction(f, dt, 60);
+    if (f.grounded) this.applyFriction(f, dt, 60);
+    else { f.velocity.x *= 1 - 1.5 * dt; f.velocity.z *= 1 - 1.5 * dt; }
     if (f.stateFrame < 6) this.faceTarget(f, 0.6);
     if (f.stateFrame === THROW_RELEASE_FRAME) f.throwRequested = true;
     if (f.stateFrame >= THROW_TOTAL_FRAMES) f.enterState(f.grounded ? CombatState.IDLE_NEUTRAL : CombatState.JUMPING);
@@ -313,6 +316,7 @@ export class CombatStateMachine {
     }
     if (buf.consume(InputFlag.THROW)) {
       f.enterState(CombatState.THROW);
+      f.throwDir = null;
       this.faceTarget(f);
       return true;
     }
@@ -356,6 +360,8 @@ export class CombatStateMachine {
 
   startJutsu(f: Fighter): void {
     f.enterState(CombatState.JUTSU);
+    f.jutsuDemoDone = false;
+    f.cinematic = false;
     f.beginMove(f.def.jutsu, 'NEUTRAL', 0);
     this.faceTarget(f);
     f.velocity.set(0, 0, 0);
@@ -414,8 +420,9 @@ export class CombatStateMachine {
     this.tmpC.copy(this.tmpB).multiplyScalar(s).addScaledVector(this.tmpA, radial * 0.6).normalize();
     f.velocity.x = this.tmpC.x * NINJA_MOVE_SPEED;
     f.velocity.z = this.tmpC.z * NINJA_MOVE_SPEED;
-    f.velocity.y = 3.2;
+    f.velocity.y = 5.0; // ~0.3 s of air time: the whole side-step clip plays out
     f.grounded = false;
+    f.position.y += 0.02;
     this.faceTarget(f);
   }
 
@@ -448,6 +455,22 @@ export class CombatStateMachine {
   private updateNinjaMove(f: Fighter, dt: number, mag: number): void {
     this.faceTarget(f);
     const buf = f.input.buffer;
+    // Airborne part: hold the hop speed (no friction, no steering); landing kills the momentum.
+    if (!f.grounded) {
+      const sp = Math.hypot(f.velocity.x, f.velocity.z);
+      if (sp > 1e-3 && sp < NINJA_MOVE_SPEED * 0.9) { f.velocity.x *= NINJA_MOVE_SPEED * 0.9 / sp; f.velocity.z *= NINJA_MOVE_SPEED * 0.9 / sp; }
+    } else if (f.stateFrame > 2) {
+      this.applyFriction(f, dt, 90);
+    }
+    if (buf.consume(InputFlag.THROW) && f.stateFrame > 2) {
+      // Shuriken cancels the side step (momentum kept, the throw clip takes over). The clip is the
+      // directional one (itl0 / itr0) chosen from which way the hop is travelling around the target.
+      this.dirToTarget(f, this.tmpA);
+      const right = f.velocity.x * this.tmpA.z - f.velocity.z * this.tmpA.x;
+      f.enterState(CombatState.THROW);
+      f.throwDir = Math.hypot(f.velocity.x, f.velocity.z) > 1 ? (right >= 0 ? 'L' : 'R') : null;
+      return;
+    }
     if (f.stateFrame > 5) {
       if (buf.consume(InputFlag.DASH) && f.stats.canSpendChakra(CHAKRA_COST_DASH)) {
         this.startDash(f, 'STANDARD');
@@ -462,17 +485,16 @@ export class CombatStateMachine {
         return;
       }
     }
-    if (f.stateFrame >= NINJA_MOVE_FRAMES && f.grounded) {
-      // Chain only on a fresh press: a held jump button (pad) used to loop the hop forever and
-      // read as a "slide lock".
+    if (f.grounded && f.stateFrame >= 6) {
+      // Landed: chain only on a fresh press (a held pad button looped the hop = "slide lock").
       if (mag > 0.15 && buf.wasPressedWithin(InputFlag.JUMP, 6)) {
         buf.consume(InputFlag.JUMP);
         f.enterState(CombatState.NINJA_MOVE);
         this.beginNinjaMove(f);
         return;
       }
-      f.enterState(mag > 0.15 ? CombatState.RUNNING : CombatState.IDLE_NEUTRAL);
-    } else if (f.stateFrame >= NINJA_MOVE_FRAMES + 24) {
+      if (f.stateFrame >= 10) f.enterState(mag > 0.15 ? CombatState.RUNNING : CombatState.IDLE_NEUTRAL);
+    } else if (f.stateFrame >= 50) {
       // Hopped off a ledge / slope: hand over to the jump state instead of hanging in the hop.
       f.enterState(CombatState.JUMPING);
     }
@@ -530,14 +552,19 @@ export class CombatStateMachine {
       this.startCombo(f, 'AIR');
       return;
     }
+    if (buf.consume(InputFlag.THROW)) {
+      f.enterState(CombatState.THROW);
+      f.throwDir = null; // air shuriken (PRJ_AIR), momentum kept
+      return;
+    }
     if (buf.consume(InputFlag.JUMP)) {
       if (mag > 0.15 && !f.airDashed) {
         // Air ninja move: a sideways burst (PL_ACT_NMOVE_SIDE in the air), once per jump.
         f.airDashed = true;
-        f.airDashFrames = 14;
-        f.velocity.x = this.moveDir.x * 13;
-        f.velocity.z = this.moveDir.z * 13;
-        f.velocity.y = Math.max(f.velocity.y, 3.0);
+        f.airDashFrames = 12;
+        f.velocity.x = this.moveDir.x * 12;
+        f.velocity.z = this.moveDir.z * 12;
+        f.velocity.y = Math.max(f.velocity.y, 2.5);
         const p = f.position.clone(); p.y += 0.6;
         this.effects.smokePuff(p, 0xe8e8ff, 6);
         this.events.emit('SFX', { attackerId: f.id, defenderId: -1, damage: 0, text: 'dash' });
@@ -608,8 +635,9 @@ export class CombatStateMachine {
     f.moveFrame++;
     f.invulnFrames = 2; // armored through the whole sequence
     if (f.moveFrame <= ULTIMATE_CUTIN) {
-      // Cut-in: both fighters hold while the portrait slides in.
+      // Cut-in: both fighters hold while the portrait slides in; chakra flares off the body.
       f.velocity.set(0, 0, 0);
+      if (f.moveFrame % 3 === 0) { const p = f.position.clone(); p.y += 0.9; this.effects.chargeAura(p, f.def.color as number); }
       this.faceTarget(f, 1);
       if (t) t.hitstopFrames = Math.max(t.hitstopFrames, 1);
       f.ultimatePhase = 0;
@@ -650,6 +678,12 @@ export class CombatStateMachine {
     if (f.cinematic) {
       // Demo: attacker rooted, victim frozen and invulnerable, launched hard on the last frame.
       f.velocity.set(0, 0, 0);
+      // Cinematic VFX: chakra aura on the body, periodic flashes, a big burst near the climax.
+      const col = f.def.color as number;
+      if (f.moveFrame % 3 === 0) { f.rig.socketWorld(SOCKET.CHEST, this.tmpB); this.effects.spriteBurst('magic', this.tmpB, { color: col, count: 2, size: 0.9, life: 0.35, speed: 1.2, up: 1.2, additive: true, spin: 4, spread: 0.5, fadeIn: 0.15 }); }
+      if (f.moveFrame % 10 === 0) { f.rig.socketWorld(SOCKET.R_HAND, this.tmpB); this.effects.flash('light', this.tmpB, 1.4, 0xffffff, 0.16); }
+      if (f.moveFrame === Math.floor(move.totalFrames * 0.7)) { f.rig.socketWorld(SOCKET.CHEST, this.tmpB); this.effects.clashBurst(this.tmpB); this.events.emit('SFX', { attackerId: f.id, defenderId: -1, damage: 0, text: f.def.ultimateSfx ?? 'exp2' }); }
+      if (f.moveFrame >= move.totalFrames - 30 && f.moveFrame % 2 === 0 && t) { this.effects.spriteBurst('spark', t.position.clone().setY(t.position.y + 1), { color: 0xfff1a8, count: 3, size: 0.5, life: 0.3, speed: 5, additive: true, gravity: -8 }); }
       if (t) {
         t.hitstopFrames = Math.max(t.hitstopFrames, 2);
         t.invulnFrames = 2;
@@ -679,6 +713,7 @@ export class CombatStateMachine {
       const hb = move.hitboxes[0];
       if (f.moveFrame <= hb.activeEnd && t) {
         this.faceTarget(f, 1);
+        if (f.moveFrame % 2 === 0) { f.rig.socketWorld(SOCKET.CHEST, this.tmpB); this.effects.spriteBurst('light', this.tmpB, { color: f.def.color as number, count: 1, size: 1.6, life: 0.25, speed: 0, up: 0, additive: true, grow: 2 }); }
         f.forward(this.tmpA);
         const dist = f.distanceToTarget();
         const speed = dist > 2.2 ? 26 : 0;
@@ -903,6 +938,42 @@ export class CombatStateMachine {
     }
   }
 
+  /** Set by the game: does an exported cinematic camera exist for this clip? */
+  hasCinematicCam: (clip: string) => boolean = () => false;
+
+  /** Jutsu demo: attacker rooted on the demo clip, victim frozen in frame, launched on the last frame. */
+  private updateJutsuDemo(f: Fighter, move: MoveDef): void {
+    const t = f.target;
+    f.velocity.set(0, 0, 0);
+    f.invulnFrames = 2;
+    const col = f.def.color as number;
+    if (f.moveFrame % 4 === 0) { f.rig.socketWorld(SOCKET.R_HAND, this.tmpB); this.effects.spriteBurst('magic', this.tmpB, { color: col, count: 2, size: 0.7, life: 0.3, speed: 1.0, up: 0.8, additive: true, spin: 5, spread: 0.4, fadeIn: 0.1 }); }
+    if (f.moveFrame >= move.totalFrames - 24 && f.moveFrame % 2 === 0 && t) { this.effects.spriteBurst('spark', t.position.clone().setY(t.position.y + 1), { color: 0xfff1a8, count: 2, size: 0.45, life: 0.28, speed: 4, additive: true, gravity: -8 }); }
+    if (f.moveFrame === Math.floor(move.totalFrames * 0.75)) { f.rig.socketWorld(SOCKET.CHEST, this.tmpB); this.effects.clashBurst(this.tmpB); this.events.emit('SFX', { attackerId: f.id, defenderId: -1, damage: 0, text: f.def.jutsuSfx ?? 'rasen' }); }
+    if (t) {
+      t.hitstopFrames = Math.max(t.hitstopFrames, 2);
+      t.invulnFrames = 2;
+      t.velocity.set(0, 0, 0);
+      t.flashTimer = 0;
+    }
+    if (f.moveFrame >= move.totalFrames) {
+      f.cinematic = false;
+      if (t) {
+        f.forward(this.tmpA);
+        t.hitstopFrames = 0;
+        const dmg = t.stats.applyDamage(JUTSU_DEMO_DAMAGE * (f.awakened ? AWAKEN_DAMAGE_MULT : 1));
+        t.velocity.set(this.tmpA.x * 20, 8, this.tmpA.z * 20);
+        t.grounded = false;
+        t.stunFrames = 50;
+        t.lastHitBy = f.id;
+        t.enterState(CombatState.TUMBLE);
+        t.bounceOnLand = true;
+        this.events.emit('JUTSU', { attackerId: f.id, defenderId: t.id, damage: dmg, text: `${f.def.displayName}: ${f.def.jutsuName ?? 'JUTSU'} HIT!`, color: 0xbfe8ff, shake: 0.6 });
+      }
+      f.enterState(CombatState.IDLE_NEUTRAL);
+    }
+  }
+
   private updateJutsu(f: Fighter, dt: number): void {
     const move = f.currentMove;
     if (!move) {
@@ -910,6 +981,31 @@ export class CombatStateMachine {
       return;
     }
     f.moveFrame++;
+    if (f.cinematic) { this.updateJutsuDemo(f, move); return; }
+    const t = f.target;
+    // Jutsu demo (Storm: the real `skl1_atk` clip + its camera once the jutsu connects).
+    if (t && f.landedHitIds.size > 0 && !f.jutsuDemoDone) {
+      const demoClip = `${f.def.code}skl1_atk1`;
+      if (f.rig.hasClip(demoClip) && this.hasCinematicCam(demoClip)) {
+        f.jutsuDemoDone = true;
+        const frames = Math.max(40, Math.round(f.rig.clipDuration(demoClip) * 60));
+        f.beginMove({ ...move, clip: demoClip, totalFrames: frames, hitboxes: [] }, 'NEUTRAL', 0);
+        f.moveFrame = 0;
+        f.cinematic = true;
+        f.hitstopFrames = 0;
+        f.velocity.set(0, 0, 0);
+        f.forward(this.tmpA);
+        t.position.copy(f.position).addScaledVector(this.tmpA, 1.5);
+        t.position.y = t.groundY;
+        t.velocity.set(0, 0, 0);
+        t.yaw = Math.atan2(-this.tmpA.x, -this.tmpA.z);
+        t.enterState(CombatState.HITSTUN);
+        t.stunFrames = frames + 10;
+        t.hitstopFrames = 0;
+        this.events.emit('JUTSU', { attackerId: f.id, defenderId: t.id, damage: 0, text: `${f.def.displayName}: ${f.def.jutsuName ?? 'JUTSU'} — demo`, color: 0xbfe8ff });
+        return;
+      }
+    }
     const hb = move.hitboxes[0];
     if (f.moveFrame < hb.activeStart) this.faceTarget(f, 0.6);
     const dist = f.distanceToTarget();
@@ -991,15 +1087,42 @@ export class CombatStateMachine {
     return this.substitute(f);
   }
 
+  /** Tethered victim upkeep: returns true while the attacker's string still holds them. */
+  private applyTether(f: Fighter): boolean {
+    if (!f.tetherBy || f.tetherFrames <= 0) return false;
+    const a = f.target && f.target.id === f.tetherBy ? f.target : null;
+    if (!a || a.state !== CombatState.COMBO_STRING || a.hitstopFrames > 0 && f.hitstopFrames > 0) {
+      if (!a || a.state !== CombatState.COMBO_STRING) { f.tetherBy = 0; f.tetherFrames = 0; return false; }
+    }
+    f.tetherFrames--;
+    // Hold at striking distance in front of the attacker, facing them; no gravity while held in the air.
+    a.forward(this.tmpA);
+    this.tmpB.copy(a.position).addScaledVector(this.tmpA, 1.35);
+    f.position.x += (this.tmpB.x - f.position.x) * 0.3;
+    f.position.z += (this.tmpB.z - f.position.z) * 0.3;
+    f.velocity.x *= 0.5; f.velocity.z *= 0.5;
+    if (!f.grounded || !a.grounded) {
+      const want = a.position.y + (a.grounded ? 0 : 0.2);
+      f.position.y += (Math.max(f.groundY, want) - f.position.y) * 0.25;
+      f.velocity.y = 0;
+      f.grounded = f.position.y <= f.groundY + 0.001;
+    }
+    f.yaw = Math.atan2(-this.tmpA.x, -this.tmpA.z);
+    if (f.stunFrames < 2) f.stunFrames = 2;
+    return true;
+  }
+
   private updateHitstun(f: Fighter, dt: number): void {
     if (this.trySubstitute(f)) return;
-    this.applyFriction(f, dt, 26);
+    if (this.applyTether(f)) return;
+    this.applyFriction(f, dt, 40);
     f.stunFrames--;
     if (f.stunFrames <= 0 && f.grounded) f.enterState(CombatState.IDLE_NEUTRAL);
   }
 
   private updateLaunched(f: Fighter, dt: number): void {
     if (this.trySubstitute(f)) return;
+    if (this.applyTether(f)) return;
     // Light air drag
     f.velocity.x *= 1 - 0.6 * dt;
     f.velocity.z *= 1 - 0.6 * dt;
@@ -1133,6 +1256,23 @@ export class CombatStateMachine {
 
     defender.velocity.set(this.tmpA.x * hb.knockback, hb.launch, this.tmpA.z * hb.knockback);
     defender.stunFrames = hb.hitstunFrames;
+    // Combo tether (Storm "juggle lock"): while the attacker is inside a string that still has
+    // follow-ups, the victim stays attached — hitstun cannot run out, they hover in air strings and
+    // are held at striking distance — so a string that starts, lands.
+    if ((attacker.state === CombatState.COMBO_STRING || attacker.state === CombatState.SUPPORT_ACT) && attacker.currentMove) {
+      const moves = this.stringFor(attacker, attacker.comboBranch);
+      const last = attacker.comboIndex >= moves.length - 1;
+      if (!last) {
+        defender.tetherBy = attacker.id;
+        defender.tetherFrames = attacker.currentMove.totalFrames - attacker.moveFrame + 16;
+        // keep them close: cap the knockback so the next hit reaches
+        defender.velocity.x *= 0.35; defender.velocity.z *= 0.35;
+      } else {
+        defender.tetherBy = 0; defender.tetherFrames = 0;
+      }
+    } else {
+      defender.tetherBy = 0; defender.tetherFrames = 0;
+    }
     defender.lastHitBy = attacker.id;
     defender.flashTimer = 0.08;
     defender.yaw = Math.atan2(-this.tmpA.x, -this.tmpA.z);

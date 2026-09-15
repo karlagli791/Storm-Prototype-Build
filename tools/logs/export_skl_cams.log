@@ -1,0 +1,19 @@
+=== 2nrt 05:47:00
+CAMERA 2nrtskl1_atk1 48 frames first [-0.0, 1.0913, 1.6261] fov 45.0
+CAMERA 2nrtskl1_atk2 68 frames first [-0.0, 1.0913, 1.6261] fov 45.0
+WROTE public/assets/ult/2nrt_skl.json ['2nrtskl1_atk1', '2nrtskl1_atk2']
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+=== 2kks 05:47:10
+CAMERA 2kksskl1_atk1 78 frames first [-0.1378, 1.0753, 1.7506] fov 45.0
+WROTE public/assets/ult/2kks_skl.json ['2kksskl1_atk1']
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+=== 2fou 05:47:14
+CAMERA 2fouskl1_atk1 62 frames first [-0.0, 1.0913, 1.6261] fov 45.0
+CAMERA 2fouskl1_atk2 62 frames first [-0.3102, 1.3068, 1.7564] fov 45.0
+WROTE public/assets/ult/2fou_skl.json ['2fouskl1_atk1', '2fouskl1_atk2']
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+=== 3mfn 05:47:21
+CAMERA 3mfnskl1_atk1 81 frames first [-2.0576, 0.3645, 2.4374] fov 45.0
+WROTE public/assets/ult/3mfn_skl.json ['3mfnskl1_atk1']
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+=== DONE 05:47:24

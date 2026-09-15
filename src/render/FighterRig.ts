@@ -28,6 +28,7 @@ export interface PoseContext {
   charging: boolean;
   moveDir: HitDir;
   hitDir: HitDir;
+  throwDir?: HitDir | null;
   falling: boolean;
   airDash?: boolean;
   jumpCount?: number;
@@ -501,6 +502,7 @@ export class FighterRig {
       hitDir: ctx.hitDir,
       airborne: !ctx.grounded,
       airDash: ctx.airDash,
+      throwDir: ctx.throwDir,
       awakened: ctx.awakened,
       falling: ctx.falling,
       stateFrame: ctx.stateFrame,
@@ -531,7 +533,7 @@ export class FighterRig {
 
   private updateGlbAnimation(ctx: PoseContext, dt: number): void {
     // Re-pick on state change, on hit direction / fall changes, or when a one-shot finished and has a chain.
-    const stateKey = `${ctx.state}|${ctx.moveClip ?? ''}|${ctx.jumpCount ?? 0}|${ctx.airDash ? 1 : 0}|${ctx.hitDir}|${ctx.falling ? 1 : 0}`;
+    const stateKey = `${ctx.state}|${ctx.moveClip ?? ''}|${ctx.jumpCount ?? 0}|${ctx.airDash ? 1 : 0}|${ctx.hitDir}|${ctx.falling ? 1 : 0}|${ctx.throwDir ?? ''}`;
     const spec = this.pickSpec(ctx);
     if (spec) {
       const changed = this.activeState !== stateKey || !this.activeSpec;

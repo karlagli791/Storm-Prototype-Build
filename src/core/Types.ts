@@ -50,7 +50,7 @@ export const CHAKRA_MAX = 100;
 
 export const RUN_SPEED = 9.0;
 export const RUN_ACCEL = 60.0;
-export const RUN_DECEL = 45.0;
+export const RUN_DECEL = 70.0;
 export const NINJA_MOVE_SPEED = 11.0;
 export const HOLLOW_STEP_SPEED = 7.5;
 export const HOLLOW_STEP_FRAMES = 12;
@@ -342,7 +342,7 @@ export interface JutsuProjectile {
 // ---------------------------------------------------------------------------
 // Events emitted by the collision pass
 // ---------------------------------------------------------------------------
-export type CombatEventKind = 'HIT' | 'GUARD_HIT' | 'CLASH' | 'PARRY' | 'GUARD_BREAK' | 'ARMOR' | 'SUB' | 'WALL_SPLAT' | 'SWITCH' | 'SPARK' | 'ULTIMATE' | 'AWAKEN' | 'SFX';
+export type CombatEventKind = 'HIT' | 'GUARD_HIT' | 'CLASH' | 'PARRY' | 'GUARD_BREAK' | 'ARMOR' | 'SUB' | 'WALL_SPLAT' | 'SWITCH' | 'SPARK' | 'ULTIMATE' | 'JUTSU' | 'AWAKEN' | 'SFX';
 
 export interface CombatEvent {
   kind: CombatEventKind;

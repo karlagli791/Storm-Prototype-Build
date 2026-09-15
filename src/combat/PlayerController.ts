@@ -62,6 +62,11 @@ export class PlayerController {
     if (f.position.y <= gy + 0.001) {
       f.position.y = gy;
       if (f.velocity.y < 0) f.velocity.y = 0;
+      if (!f.grounded && (f.state === CombatState.JUMPING || f.state === CombatState.NINJA_MOVE || f.state === CombatState.THROW)) {
+        // Touchdown: no carried momentum — the run state rebuilds speed from the stick.
+        f.velocity.x *= 0.15;
+        f.velocity.z *= 0.15;
+      }
       f.grounded = true;
       f.doubleJumped = false;
       f.airDashed = false;
@@ -90,7 +95,7 @@ export class PlayerController {
         state: f.state,
         stateFrame: f.stateFrame,
         moveName: f.currentMove?.name ?? null,
-        airDash: f.airDashFrames > 0,
+        airDash: f.airDashed && !f.grounded,
         jumpCount: f.jumpCount,
         awakened: f.awakened,
         moveClip: f.currentMove?.clip ?? null,
@@ -102,6 +107,7 @@ export class PlayerController {
         charging: f.state === CombatState.DASH_CHARGING,
         moveDir: f.moveDirLocal,
         hitDir: f.lastHitDir,
+        throwDir: f.throwDir,
         falling: !f.grounded && f.velocity.y < -0.5,
         framesLeft: f.state === CombatState.KNOCKDOWN ? 34 - f.stateFrame : f.stunFrames,
       },

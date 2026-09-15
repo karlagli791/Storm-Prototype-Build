@@ -60,7 +60,7 @@ function move(p: Partial<MoveDef> & Pick<MoveDef, 'name' | 'totalFrames' | 'hitb
 // ---------------------------------------------------------------------------------------------
 function socketForBone(bone: string, blade: boolean): { socket: string; socketEnd?: string; radius?: number } {
   const b = bone.toLowerCase();
-  if (blade && /r hand|r arm|weapon|sword/.test(b)) return { socket: SOCKET.BLADE_BASE, socketEnd: SOCKET.BLADE_TIP, radius: 0.35 };
+  if (blade && /r hand|r arm|weapon|sword|ksng|trall|blade|katana|saber/.test(b)) return { socket: SOCKET.BLADE_BASE, socketEnd: SOCKET.BLADE_TIP, radius: 0.35 };
   if (/l hand|l forearm|l arm/.test(b)) return { socket: SOCKET.L_HAND };
   if (/r hand|r forearm|r arm/.test(b)) return { socket: SOCKET.R_HAND };
   if (/l foot|l toe|l leg|l calf/.test(b)) return { socket: SOCKET.L_FOOT };

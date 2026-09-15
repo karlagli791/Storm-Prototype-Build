@@ -8,7 +8,7 @@ space as the exported character GLB, so the engine can place the camera relative
 
 usage: blender -b --python export_ultimate_camera.py -- <code> <out.json> <bod1.xfbin> <spl1.xfbin>
 """
-import bpy, sys, os, json, math, addon_utils
+import bpy, sys, os, re, json, math, addon_utils
 from mathutils import Matrix, Quaternion
 
 argv = sys.argv[sys.argv.index("--") + 1:]
@@ -36,7 +36,8 @@ TO_GLTF = Matrix(((1, 0, 0, 0), (0, 0, 1, 0), (0, -1, 0, 0), (0, 0, 0, 1)))
 
 result = {}
 for act in bpy.data.actions:
-    if not act.name.startswith(f'{code}spl1_'):
+    # spl1 = ultimate demo; skl1_atk / skl_atk = jutsu demo (set CAM_ACTIONS to override the pattern)
+    if not re.match(os.environ.get('CAM_ACTIONS') or rf'{code}(spl1_|skl\d?_?atk)', act.name):
         continue
     # the cinematic camera is either a shared 'camera01' or a per-action '<clip>_cam' object
     cam = None; slot = None
