@@ -264,3 +264,4 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 - 2026-09-15 08:52 — Version 0.6.0 (part 2): final character and stage exports, common bank with victim demo clips, frame data
 - 2026-09-15 09:02 — Version 0.6.0
 - 2026-09-15 10:34 — Playtest round 3: uniform jumps, homing hits, cancels, stage outlines, per-character chakra effects
+- 2026-09-15 10:35 — Camera stays inside the stage outline (no clipping into walls and cliffs at the edge)
