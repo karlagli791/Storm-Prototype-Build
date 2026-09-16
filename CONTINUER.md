@@ -279,3 +279,4 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 - 2026-09-15 10:35 — Camera stays inside the stage outline (no clipping into walls and cliffs at the edge)
 - 2026-09-15 10:35 — Version 0.7.0
 - 2026-09-15 10:39 — Held chakra effects survive slow frames (fade on missed updates, not wall-clock gaps)
+- 2026-09-16 15:02 — One Piece: Fighting Path fighters with their own rig, animation and controls
