@@ -151,23 +151,31 @@ def resolve(arm, meshes=()):  # noqa: D401
 
 
 def weapon_bone(meshes, bones):
-    """Dominant deform bone of the mesh named like a weapon."""
+    """Deform bones of the weapon mesh: the dominant one, then the rest of the prop's bones.
+
+    A held weapon is usually split over several bones (Law's Kikoku rides on four), so the engine
+    needs all of them to carry the prop into the hand as one rigid piece. They are renamed
+    `OP_Weapon`, `OP_Weapon_1`, … here and moved together at runtime.
+    """
     by_name = {b.name: b for b in bones}
-    best, best_w = None, 0.0
+    totals = {}
     for o in meshes:
         if not re.search(r'weapon|sword|blade|katana', o.name, re.I):
             continue
         groups = {g.index: g.name for g in o.vertex_groups}
-        totals = {}
         for v in o.data.vertices:
             for g in v.groups:
                 n = groups.get(g.group)
-                if n in by_name:
+                if n in by_name and g.weight > 0.05:
                     totals[n] = totals.get(n, 0.0) + g.weight
-        for n, w in totals.items():
-            if w > best_w:
-                best, best_w = by_name[n], w
-    return best
+    if not totals:
+        return None
+    ordered = sorted(totals.items(), key=lambda kv: -kv[1])
+    cut = ordered[0][1] * 0.05
+    extras = [by_name[n] for n, w in ordered[1:] if w >= cut][:8]
+    for i, b in enumerate(extras):
+        b.name = f'OP_Weapon_{i + 1}'
+    return by_name[ordered[0][0]]
 
 
 CANON = {

@@ -309,7 +309,7 @@ export const SHANKS_DEF = opbrChar({
 
 export const KATAKURI_DEF = opbrChar({
   key: 'katakuri', weapon: 'hand', name: 'CHARLOTTE KATAKURI', title: 'Big Mom Pirates · Mochi-Mochi Fruit', color: 0x9a3a5a, accent: 0xf5d8e0,
-  height: 2.75, health: 1150, runSpeed: 8.8, hakiColor: 0x3a1a2a, gaugeName: 'MOCHI',
+  height: 2.6, health: 1150, runSpeed: 8.8, hakiColor: 0x3a1a2a, gaugeName: 'MOCHI',
   style: 'Reach and reads — mochi limbs hit from outside your range, Future Sight punishes guesses.',
   // The mochi trident / spear meshes only exist while a skill is out.
   altMesh: '^15025_0[345]_Weapon', altMode: 'skill',
@@ -363,7 +363,7 @@ export const FUJITORA_DEF = opbrChar({
 
 export const KUMA_DEF = opbrChar({
   key: 'kuma', name: 'BARTHOLOMEW KUMA', title: 'Warlord · Paw-Paw Fruit', color: 0x2a2a3a, accent: 0xff9ad0,
-  height: 2.89, health: 1200, runSpeed: 8.2, hakiColor: 0x5a2a4a, gaugeName: 'PAW',
+  height: 2.7, health: 1200, runSpeed: 8.2, hakiColor: 0x5a2a4a, gaugeName: 'PAW',
   style: 'Repulsion — the paw pads push anything away, including pain and air itself.',
   string: [['palm_r', 40], ['double_palm', 46], ['backhand', 50], ['double_palm', 100, 'blow']],
   up: [['upper_r', 66, 'launch'], ['palm_r', 74, 'launch']],
@@ -415,7 +415,7 @@ export const BURGESS_DEF = opbrChar({
 
 export const SHIKI_DEF = opbrChar({
   key: 'shiki', name: 'SHIKI', title: 'The Golden Lion · Float-Float Fruit', color: 0xd8c070, accent: 0x2a2a3a,
-  height: 3.0, health: 1050, runSpeed: 9.4, float: true, hakiColor: 0xd8c070, gaugeName: 'FLOAT',
+  height: 2.55, health: 1050, runSpeed: 9.4, float: true, hakiColor: 0xd8c070, gaugeName: 'FLOAT',
   style: 'Never touches the ground — sword legs below, floating rubble above.',
   string: [['kick_round', 40], ['kick_spin', 44], ['slash_diag', 48], ['kick_axe', 96, 'blow']],
   up: [['kick_round', 66, 'launch'], ['slash_rise', 72, 'launch']],

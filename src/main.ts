@@ -889,6 +889,9 @@ class Game implements EventSink {
     this.effects.update(dt);
     this.opbrFx.update(dt);
     this.camera.dashTarget = a1.state === CombatState.DASH_HOMING || a1.state === CombatState.DASH_STARTUP || a1.state === CombatState.SPARK_DASH ? 1 : 0;
+    // Frame for the taller of the two leaders (the One Piece roster ranges 1.4 m to 3 m).
+    const tall = Math.max(this.team1.active.def.opbr?.height ?? 1.85, this.team2.active.def.opbr?.height ?? 1.85);
+    this.camera.sizeScale = 1 + Math.max(0, tall - 1.95) * 0.34;
     if (!this.applyIntroCamera() && !this.applyKoCamera(dt) && !this.applyWinCamera(dt) && !this.applyCinematicCamera()) this.camera.update(this.team1.active.rig.root.position, this.team2.active.rig.root.position, dt);
     if (background) return;
     // Smear frames on fast travel, radial blur while P1 dashes, chakra heat around jutsu.

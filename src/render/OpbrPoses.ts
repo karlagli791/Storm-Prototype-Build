@@ -458,6 +458,9 @@ export function opbrClipFor(ctx: PoseContext, float: boolean): { name: string; f
       return { name: 'dodge', frame: ctx.stateFrame };
     case CombatState.THROW:
       return { name: 'throw', frame: ctx.stateFrame };
+    case CombatState.SUPPORT_ACT:
+      // Assists run in without their own clip data: a running strike reads correctly.
+      return { name: ctx.stateFrame < 16 ? 'run' : 'op_jab_r', frame: ctx.stateFrame < 16 ? undefined : ctx.stateFrame - 16 };
     case CombatState.WIN:
       return { name: 'win', frame: ctx.stateFrame };
     case CombatState.INTRO:

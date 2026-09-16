@@ -76,6 +76,11 @@ export class DualTargetCamera {
   dashTarget = 0;
   /** Player option: scales the follow distance (0.7 close … 1.4 far). */
   distanceScale = 1;
+  /**
+   * Extra pull-back for oversized fighters. The framing is tuned for ~1.85 m ninja; Kuma, Shiki
+   * and Katakuri are half again as tall and would otherwise fill the frame.
+   */
+  sizeScale = 1;
   private dashWeight = 0;
   /** Combo camera weight target (0 = normal orbit, 1 = side view), smoothed in update(). */
   comboTarget = 0;
@@ -146,8 +151,8 @@ export class DualTargetCamera {
 
     // Behind-the-shoulder: back along the P1→P2 axis, offset to P1's right so P1 reads on the
     // left of the frame, height rising with distance; look between the two, biased to the enemy.
-    const back = clamp(P.BACK_MIN + P.BACK_K * d, P.BACK_MIN, P.BACK_MAX) * this.distanceScale;
-    const up = clamp(P.UP_MIN + P.UP_K * d, P.UP_MIN, P.UP_MAX) * (0.7 + 0.3 * this.distanceScale);
+    const back = clamp(P.BACK_MIN + P.BACK_K * d, P.BACK_MIN, P.BACK_MAX) * this.distanceScale * this.sizeScale;
+    const up = clamp(P.UP_MIN + P.UP_K * d, P.UP_MIN, P.UP_MAX) * (0.7 + 0.3 * this.distanceScale) * (0.6 + 0.4 * this.sizeScale);
     this.nLat.crossVectors(this.uSep, UP).normalize().multiplyScalar(this.side);
     this.cTarget.copy(p1).addScaledVector(this.uSep, -back).addScaledVector(this.nLat, P.SIDE);
     this.cTarget.y = Math.max(p1.y, p2.y) * 0.35 + Math.min(p1.y, p2.y) * 0.65 + up;

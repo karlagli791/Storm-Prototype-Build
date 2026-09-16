@@ -141,9 +141,9 @@ export class OpbrFX {
         break;
       case 'slash':
       case 'blade_arc':
-        e.el.slashArc(ahead, color, 1.5 * scale, 0);
-        e.el.slashArc(ahead, 0xffffff, 1.1 * scale, 0.04);
-        e.spriteBurst('slash', ahead, { color, count: 2, size: 2.2 * scale, life: 0.16, speed: 0.5 });
+        e.el.slashArc(ahead, color, 1.0 * scale, 0);
+        e.el.slashArc(ahead, 0xffffff, 0.7 * scale, 0.04);
+        e.spriteBurst('slash', ahead, { color, count: 2, size: 1.5 * scale, life: 0.14, speed: 0.5 });
         break;
       case 'impact':
         e.hitSpark(ahead, color, 12, 7 * scale);
@@ -182,7 +182,7 @@ export class OpbrFX {
         e.spriteBurst('trace', pos, { color: 0xffe9c0, count: 5, size: 0.9 * scale, life: 0.18, speed: 6 });
         break;
       case 'room': {
-        const m = this.shell(ROOM_FS, color || 0x6ad8ff, 0.5, pos.clone().setY(groundY + 4.2), 0.6, 1.9, 9.5);
+        const m = this.shell(ROOM_FS, color || 0x6ad8ff, 0.32, pos.clone().setY(groundY + 3.6), 0.6, 1.9, 7.0);
         m.userData.room = true;
         e.el.groundWave(pos.clone().setY(groundY), color || 0x6ad8ff, 9 * scale, 0.35, 1.1);
         break;
@@ -194,12 +194,13 @@ export class OpbrFX {
       case 'gamma':
         e.flash('window', ahead, 2.4 * scale, 0x9fe8ff, 0.22);
         e.spriteBurst('spark2', ahead, { color: 0x9fe8ff, count: 16, size: 0.4 * scale, life: 0.4, speed: 5 });
-        this.shell(ORB_FS, 0x8adfff, 0.7, ahead, 0.7 * scale, 0.5, 1.2);
+        this.shell(ORB_FS, 0x8adfff, 0.55, ahead, 0.35 * scale, 0.45, 0.8);
         break;
       case 'gravity': {
-        const orb = this.shell(ORB_FS, color || 0x5a3aa8, 0.85, pos, 0.8 * scale, 0.7, 1.4);
+        // A dense little core, not a bubble the size of the fighter.
+        const orb = this.shell(ORB_FS, color || 0x5a3aa8, 0.6, pos, 0.4 * scale, 0.55, 0.5);
         orb.userData.grav = true;
-        e.el.groundWave(pos.clone().setY(groundY), 0x7a5ad0, 4.5 * scale, 0.45, 0.6);
+        e.el.groundWave(pos.clone().setY(groundY), 0x7a5ad0, 3.2 * scale, 0.4, 0.5);
         break;
       }
       case 'meteor': {
@@ -235,7 +236,7 @@ export class OpbrFX {
         e.spriteBurst('spark', pos, { color: 0x9a6aff, count: 6, size: 0.35 * scale, life: 0.3, speed: 5 });
         break;
       case 'lion':
-        e.el.shockDome(pos, 0xffd070, 1.5 * scale, 0.4);
+        e.el.shockDome(pos, 0xffd070, 1.0 * scale, 0.32);
         e.spriteBurst('star', pos, { color: 0xffe0a0, count: 12, size: 0.6 * scale, life: 0.4, speed: 6 });
         e.dustKick(pos.clone().setY(groundY), 14, 1.4 * scale, 2.6 * scale);
         break;

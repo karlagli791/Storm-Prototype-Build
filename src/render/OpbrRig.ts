@@ -245,6 +245,8 @@ export class OpbrRig {
   private matDepth = 0;
   /** How the weapon bone is handled: left where the rip put it, or carried in the right hand. */
   weaponMode: 'keep' | 'hand' = 'keep';
+  /** The prop's other deform bones (`OP_Weapon_1`…): carried rigidly with the main weapon bone. */
+  private weaponExtra: BoundBone[] = [];
   private target = new PoseBuffer();
   private current = new PoseBuffer();
   private fade = new PoseBuffer();
@@ -309,6 +311,21 @@ export class OpbrRig {
     }
     this.model = scene;
     for (const b of this.bones.values()) this.byNode.set(b.node, b);
+    // A held weapon is skinned across several bones; they all ride with the main one.
+    scene.traverse((o) => {
+      if (!/^OP_Weapon_\d+$/.test(o.name)) return;
+      const scl = new THREE.Vector3();
+      o.getWorldScale(scl);
+      const inv = new THREE.Vector3();
+      scene.getWorldScale(inv);
+      const b: BoundBone = {
+        node: o, worldRest: worldRot(o), restPosW: worldPos(o), restScaleW: scl.divide(inv),
+        zero: new THREE.Quaternion(), eff: new THREE.Quaternion(), vis: new THREE.Quaternion(),
+        wRot: new THREE.Quaternion(), wPos: new THREE.Vector3(),
+      };
+      this.weaponExtra.push(b);
+      this.byNode.set(o, b);
+    });
     if (!this.bones.has('hips') || !this.bones.has('chest')) return false;
 
     // Facing: the toe bones point along the character's front. Every rip measured so far faces
@@ -478,6 +495,16 @@ export class OpbrRig {
         b.wPos.copy(_v.copy(b.restPosW).sub(p.restPosW).applyQuaternion(p.vis)).add(p.wPos);
       }
     }
+    // 1b. The prop's other bones follow the main weapon bone rigidly, so the sword stays one piece.
+    const wp = this.bones.get('weapon');
+    if (wp && this.weaponMode === 'hand' && this.weaponExtra.length) {
+      _q.copy(wp.wRot).multiply(_q2.copy(wp.worldRest).invert());
+      for (const b of this.weaponExtra) {
+        b.wRot.copy(_q).multiply(b.worldRest);
+        b.wPos.copy(_v.copy(b.restPosW).sub(wp.restPosW).applyQuaternion(_q)).add(wp.wPos);
+      }
+    }
+
     // 2. Walk the real hierarchy, converting those world transforms into local ones.
     this.writeNode(this.model, IDENTITY_MAT);
   }
@@ -487,7 +514,8 @@ export class OpbrRig {
     const depth = this.matDepth++;
     let world = this.matPool[depth];
     if (!world) { world = new THREE.Matrix4(); this.matPool[depth] = world; }
-    if (b && !(b === this.bones.get('weapon') && this.weaponMode !== 'hand')) {
+    const isWeapon = b !== undefined && (b === this.bones.get('weapon') || this.weaponExtra.includes(b));
+    if (b && !(isWeapon && this.weaponMode !== 'hand')) {
       world.compose(b.wPos, b.wRot, b.restScaleW);
       _m.copy(parentWorld).invert().multiply(world);
       _m.decompose(node.position, node.quaternion, node.scale);
