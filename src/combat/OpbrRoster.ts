@@ -143,6 +143,7 @@ interface OpbrOpts {
   hakiColor?: number;
   gaugeName?: string;
   style: string;
+  idleClip?: string;
   altMesh?: string;
   altMode?: 'haki' | 'skill';
   weapon?: 'keep' | 'hand' | 'hide';
@@ -161,7 +162,7 @@ function opbrChar(o: OpbrOpts): CharacterDef {
   const ult = skill(code, o.ultimate);
   const profile: OpbrProfile = {
     key: o.key, height: o.height, float: o.float, hakiColor: o.hakiColor ?? 0x2a2a3a,
-    gaugeName: o.gaugeName ?? 'HAKI', skills, ultimate: ult, style: o.style,
+    gaugeName: o.gaugeName ?? 'HAKI', skills, ultimate: ult, style: o.style, idleClip: o.idleClip,
     altMesh: o.altMesh, altMode: o.altMode, weapon: o.weapon,
   };
   return {
@@ -203,7 +204,7 @@ const fx = (t: number, kind: OpbrFxEvent['kind'], extra: Partial<OpbrFxEvent> = 
 
 // ------------------------------------------------------------------------------ roster
 export const LUFFY_DEF = opbrChar({
-  key: 'luffy', name: 'MONKEY D. LUFFY', title: 'Straw Hat Crew · Gum-Gum Fruit', color: 0xd94b3a, accent: 0xf2d24a,
+  key: 'luffy', idleClip: 'idle_ready', name: 'MONKEY D. LUFFY', title: 'Straw Hat Crew · Gum-Gum Fruit', color: 0xd94b3a, accent: 0xf2d24a,
   height: 1.74, health: 1050, runSpeed: 10.0, hakiColor: 0x1a1a22, gaugeName: 'HAKI',
   style: 'Rubber rushdown — every skill stretches, Haki turns the fists black and heavy.',
   // The rip ships Gear-4 balloon limbs as "weapon" meshes, but they are skinned to their own
@@ -388,7 +389,7 @@ export const KUMA_DEF = opbrChar({
 });
 
 export const BURGESS_DEF = opbrChar({
-  key: 'burgess', name: 'JESUS BURGESS', title: 'Blackbeard Pirates · Champion', color: 0x8a5a2a, accent: 0xf0d090,
+  key: 'burgess', idleClip: 'idle_ready', name: 'JESUS BURGESS', title: 'Blackbeard Pirates · Champion', color: 0x8a5a2a, accent: 0xf0d090,
   height: 2.32, health: 1150, runSpeed: 9.0, hakiColor: 0x3a2a1a, gaugeName: 'MUSCLE',
   style: 'Pro wrestling — grabs, slams and a body that keeps coming through your hits.',
   string: [['jab_r', 40], ['elbow_r', 44], ['headbutt', 50], ['lariat', 102, 'blow']],
@@ -466,7 +467,7 @@ export const KARASU_DEF = opbrChar({
 });
 
 export const KOBY_DEF = opbrChar({
-  key: 'koby', name: 'KOBY', title: 'Marine Captain · Rokushiki', color: 0xe8a0b0, accent: 0xf0f0f0,
+  key: 'koby', idleClip: 'idle_ready', name: 'KOBY', title: 'Marine Captain · Rokushiki', color: 0xe8a0b0, accent: 0xf0f0f0,
   height: 1.8, health: 920, runSpeed: 10.2, hakiColor: 0x8a8a9a, gaugeName: 'HAKI',
   style: 'Marine Six Powers — the fastest fighter here, built on precision rather than weight.',
   string: [['jab_r', 32], ['jab_l', 32], ['kick_front', 40], ['kick_spin', 86, 'blow']],
@@ -500,7 +501,7 @@ export const OPBR_ROSTER: CharacterDef[] = [
 /** Chopper joins as a support only — the rip is the game's own support model. */
 export const CHOPPER_SUPPORT: CharacterDef = {
   ...opbrChar({
-    key: 'chopper', name: 'TONY TONY CHOPPER', title: 'Straw Hat Crew · Support', color: 0xd06a4a, accent: 0xf0e0c0,
+    key: 'chopper', idleClip: 'idle_ready', name: 'TONY TONY CHOPPER', title: 'Straw Hat Crew · Support', color: 0xd06a4a, accent: 0xf0e0c0,
     height: 1.4, health: 800, runSpeed: 9.0, gaugeName: 'HAKI',
     style: 'Support only — Kung-Fu Point rushes in, Guard Point covers you.',
     string: [['jab_r', 30], ['jab_l', 30], ['headbutt', 46, 'blow']],

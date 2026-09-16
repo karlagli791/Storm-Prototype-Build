@@ -481,6 +481,7 @@ export class FighterRig {
     this.time += dt;
     if (this.opbr) {
       const pick = opbrClipFor(ctx, !!this.def.opbr?.float);
+      if (pick.name === 'idle' && this.def.opbr?.idleClip) pick.name = this.def.opbr.idleClip;
       this.opbr.play(pick.name, pick.frame !== undefined && pick.frame <= 1);
       if (pick.frame !== undefined) this.opbr.setFrame(pick.frame);
       this.opbr.update(ctx, dt);

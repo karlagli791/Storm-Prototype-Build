@@ -116,6 +116,34 @@ const IDLE: PoseClip = {
   ],
 };
 
+/** Brawler idle: fists up, weight forward, small bounce — for the hand-to-hand fighters. */
+const IDLE_READY: PoseClip = {
+  frames: 72, loop: true, blend: 8,
+  keys: [
+    { t: 0, pose: blend(STANCE, P({
+      hips: [0, 0.26, 0], spine: [0.05, -0.1, 0], chest: [0.08, -0.16, 0], head: [-0.05, 0.2, 0],
+      armL: limb(0.42, 0.62, 0, L), foreL: limb(1.55, 0, 0.75, L), handL: limb(0.2, 0, 0, L),
+      armR: limb(0.52, 0.56, 0, R), foreR: limb(1.62, 0, 0.8, R), handR: limb(0.25, 0, 0, R),
+      thighL: limb(0.24, 0.16, 0, L), calfL: limb(-0.48, 0, 0, L), footL: limb(0.3, 0, 0, L),
+      thighR: limb(-0.14, 0.15, 0, R), calfR: limb(-0.36, 0, 0, R), footR: limb(0.24, 0, 0, R),
+    }, { rootY: -0.08, rootPitch: 0.12 })) },
+    { t: 18, pose: blend(STANCE, P({
+      hips: [0, 0.28, 0], spine: [0.06, -0.11, 0], chest: [0.11, -0.17, 0], head: [-0.07, 0.21, 0],
+      armL: limb(0.48, 0.65, 0, L), foreL: limb(1.6, 0, 0.75, L), handL: limb(0.2, 0, 0, L),
+      armR: limb(0.58, 0.59, 0, R), foreR: limb(1.68, 0, 0.8, R), handR: limb(0.25, 0, 0, R),
+      thighL: limb(0.3, 0.17, 0, L), calfL: limb(-0.6, 0, 0, L), footL: limb(0.34, 0, 0, L),
+      thighR: limb(-0.1, 0.16, 0, R), calfR: limb(-0.44, 0, 0, R), footR: limb(0.26, 0, 0, R),
+    }, { rootY: -0.15, rootPitch: 0.14 })), ease: 'inout' },
+    { t: 40, pose: blend(STANCE, P({
+      hips: [0, 0.24, 0], chest: [0.07, -0.14, 0], head: [-0.04, 0.18, 0],
+      armL: limb(0.4, 0.6, 0, L), foreL: limb(1.5, 0, 0.7, L),
+      armR: limb(0.5, 0.54, 0, R), foreR: limb(1.58, 0, 0.75, R),
+      thighL: limb(0.22, 0.16, 0, L), calfL: limb(-0.46, 0, 0, L),
+      thighR: limb(-0.15, 0.15, 0, R), calfR: limb(-0.34, 0, 0, R),
+    }, { rootY: -0.06, rootPitch: 0.11 })), ease: 'inout' },
+  ],
+};
+
 const GUARD: PoseClip = {
   frames: 60, loop: true, blend: 4,
   keys: [
@@ -398,7 +426,7 @@ const FLOAT_MOVE: PoseClip = {
 };
 
 registerClips({
-  idle: IDLE, run: RUN, walk: WALK, guard: GUARD, jump_up: JUMP_UP, fall: FALL, land: LAND,
+  idle: IDLE, idle_ready: IDLE_READY, run: RUN, walk: WALK, guard: GUARD, jump_up: JUMP_UP, fall: FALL, land: LAND,
   dash: DASH, dash_start: DASH_START, charge: CHARGE, dodge: DODGE, throw: THROW, win: WIN, intro: INTRO,
   hit_f: hitClip(0, 1), hit_b: hitClip(0, -1), hit_l: hitClip(1, 0.4), hit_r: hitClip(-1, 0.4),
   launch: LAUNCH, tumble: TUMBLE, crumple: CRUMPLE, knockdown: KNOCKDOWN, wall: WALL,

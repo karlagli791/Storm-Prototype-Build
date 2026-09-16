@@ -377,6 +377,8 @@ export interface OpbrProfile {
   ultimate: OpbrSkill;
   /** Fighting-style blurb for the move list. */
   style?: string;
+  /** Idle clip: 'idle' (relaxed) or 'idle_ready' (fists up) — see OpbrPoses. */
+  idleClip?: string;
   /** Extra body swapped in for a transformation (Karasu's crow form). */
   altGlb?: string;
   /**
