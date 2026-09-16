@@ -214,7 +214,7 @@ moves sit on a Fighting-Path style skill palette:
 | 1 / 2 / 3 / 4 | L1 + ○ / △ / □ / ✕ | Skills 1-4 — each costs gauge and has its own cooldown |
 | 5 | R1 + ○ | Finisher (full gauge) |
 | R | R1 + △ | Armament Haki — 12 s, +25 % damage, super armour on skills |
-| F | R1 (tap) | Observation step — short invulnerable sidestep |
+| F | L2 + stick flick | Observation step — short invulnerable sidestep (the guard roll) |
 | J | ○ | Combo string, launcher and tilt branches as usual |
 
 Tuning their animation: `npm run dev`, then open `/opbr_lab.html` — every pose clip, frame by frame.

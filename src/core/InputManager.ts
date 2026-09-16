@@ -285,18 +285,20 @@ export class KeyboardInputSource implements InputSource {
       if (b[PAD.R1]) held |= InputFlag.SUPPORT2; // R1: call support 2
       if (b[PAD.R3]) held |= InputFlag.SWITCH; // R3: leader switch
       if (this.opbrMode && (b[PAD.L1] || b[PAD.R1])) {
-        // The palette takes the face buttons over while a shoulder is held.
+        // The palette takes the face buttons over while a shoulder is held; a shoulder on its own
+        // still calls that support, so these fighters keep the team-of-three mechanics.
         const face = b[PAD.CIRCLE] || b[PAD.TRIANGLE] || b[PAD.SQUARE] || b[PAD.CROSS];
-        held &= ~(InputFlag.ATTACK | InputFlag.JUMP | InputFlag.THROW | InputFlag.CHARGE | InputFlag.JUTSU | InputFlag.SUPPORT | InputFlag.SUPPORT2 | InputFlag.DASH | InputFlag.CHAKRA);
-        if (b[PAD.L1]) {
-          if (b[PAD.CIRCLE]) held |= InputFlag.SKILL1;
-          if (b[PAD.TRIANGLE]) held |= InputFlag.SKILL2;
-          if (b[PAD.SQUARE]) held |= InputFlag.SKILL3;
-          if (b[PAD.CROSS]) held |= InputFlag.SKILL4;
-        } else {
-          if (b[PAD.CIRCLE]) held |= InputFlag.ULTIMATE;
-          if (b[PAD.TRIANGLE]) held |= InputFlag.HAKI;
-          if (!face) held |= InputFlag.STEP;
+        if (face) {
+          held &= ~(InputFlag.ATTACK | InputFlag.JUMP | InputFlag.THROW | InputFlag.CHARGE | InputFlag.JUTSU | InputFlag.SUPPORT | InputFlag.SUPPORT2 | InputFlag.DASH | InputFlag.CHAKRA);
+          if (b[PAD.L1]) {
+            if (b[PAD.CIRCLE]) held |= InputFlag.SKILL1;
+            if (b[PAD.TRIANGLE]) held |= InputFlag.SKILL2;
+            if (b[PAD.SQUARE]) held |= InputFlag.SKILL3;
+            if (b[PAD.CROSS]) held |= InputFlag.SKILL4;
+          } else {
+            if (b[PAD.CIRCLE]) held |= InputFlag.ULTIMATE;
+            if (b[PAD.TRIANGLE]) held |= InputFlag.HAKI;
+          }
         }
       }
       if (b[PAD.DPAD_UP] || gp.ly > 0.6) held |= InputFlag.UP;

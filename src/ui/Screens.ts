@@ -124,10 +124,11 @@ function moveRows(d: CharacterDef): string {
     o.skills.forEach((sk, i) => rows.push(row(sk.name, btn[i] ?? `S${i + 1}`, `${sk.desc} · ${sk.cost}% gauge · ${sk.cooldown}s cooldown`)));
     rows.push(row(o.ultimate.name, `${GLYPH.r1} + ${GLYPH.circle} (full gauge)`, o.ultimate.desc));
     rows.push(row('Armament Haki', `${GLYPH.r1} + ${GLYPH.triangle}`, '12 s · +25 % damage, skills gain super armour'));
-    rows.push(row('Observation step', `${GLYPH.r1} (tap)`, 'short invulnerable sidestep'));
+    rows.push(row('Observation step', `${GLYPH.l2} + stick flick`, 'short invulnerable sidestep'));
     rows.push(row(`${o.gaugeName ?? 'HAKI'} gauge`, `${GLYPH.triangle} hold`, 'charge it standing still; skills spend it'));
     rows.push(row('Guard · substitution', `${GLYPH.l2} · ${GLYPH.l2} in hitstun`, 'shared with the Storm side'));
     rows.push(row('Keyboard', '1 2 3 4 · 5 · R · F', 'skills · finisher · Haki · step'));
+    rows.push(row('Supports', `${GLYPH.l1} / ${GLYPH.r1} on their own`, 'a shoulder without a face button still calls the assist'));
     return rows.join('');
   }
   rows.push(row('Neutral string', `${GLYPH.circle} ${GLYPH.circle} ${GLYPH.circle} ${GLYPH.circle}`, `${d.neutralString.moves.length} moves · ${hits(d.neutralString.moves)} hits · ${dmg(d.neutralString.moves)} dmg`));
