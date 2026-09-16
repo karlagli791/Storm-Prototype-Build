@@ -1,0 +1,37 @@
+=== 2pea 06:50:39
+NO CAMERA/ARMATURE []
+=== 2jry 06:50:41
+CAMERA 2jryskl1_atk1 85 frames first [-0.0, 1.1172, 1.8672] fov 45.0
+WROTE public/assets/ult/2jry_skl.json ['2jryskl1_atk1']
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+=== 2tnd 06:50:44
+NO CAMERA/ARMATURE []
+=== 2orc 06:50:46
+NO CAMERA/ARMATURE []
+=== 2roc 06:50:48
+CAMERA 2rocskl1_atk 56 frames first [0.0, 1.4399, 1.0891] fov 45.0
+WROTE public/assets/ult/2roc_skl.json ['2rocskl1_atk']
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+=== 2nej 06:50:50
+NO CAMERA/ARMATURE []
+=== 2skr 06:50:53
+NO CAMERA/ARMATURE []
+=== 2hnt 06:50:55
+NO CAMERA/ARMATURE []
+=== 2ksm 06:50:57
+NO CAMERA/ARMATURE []
+=== 2hdn 06:50:59
+NO CAMERA/ARMATURE []
+=== 2tob 06:51:01
+NO CAMERA/ARMATURE []
+=== 2guy 06:51:03
+CAMERA 2guyskl1_atk1 89 frames first [0.0145, 0.706, 5.1481] fov 45.0
+WROTE public/assets/ult/2guy_skl.json ['2guyskl1_atk1']
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+=== 2klb 06:51:06
+NO CAMERA/ARMATURE []
+=== 2kbt 06:51:08
+NO CAMERA/ARMATURE []
+=== 2sgt 06:51:09
+NO CAMERA/ARMATURE []
+=== DONE 06:51:11

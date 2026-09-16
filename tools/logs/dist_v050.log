@@ -24,3 +24,11 @@ computing gzip size...
   • packaging       platform=win32 arch=x64 electron=33.4.11 appOutDir=release\win-unpacked
   • updating asar integrity executable resource  executablePath=release\win-unpacked\STORM Prototype Build.exe
   • building        target=portable file=release\StormPrototypeBuild-0.5.0-x64.exe archs=x64
+  • signing with signtool.exe  path=release\StormPrototypeBuild-0.5.0-x64.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • building        target=nsis file=release\StormPrototypeBuild-0.5.0-x64.exe archs=x64 oneClick=true perMachine=false
+  • signing with signtool.exe  path=release\__uninstaller-nsis-storm4-proto.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • signing with signtool.exe  path=release\StormPrototypeBuild-0.5.0-x64.exe
+  • no signing info identified, signing is skipped  signHook=false cscInfo=null
+  • building block map  blockMapFile=release\StormPrototypeBuild-0.5.0-x64.exe.blockmap

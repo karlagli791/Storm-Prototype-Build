@@ -20,6 +20,13 @@ export interface KeyBinding {
   support: string[];
   support2: string[];
   ultimate: string[];
+  /** One Piece palette: four skills, the finisher, Armament Haki and the Observation step. */
+  skill1: string[];
+  skill2: string[];
+  skill3: string[];
+  skill4: string[];
+  haki: string[];
+  step: string[];
   up: string[];
   down: string[];
   left: string[];
@@ -42,7 +49,13 @@ export const P1_BINDINGS: KeyBinding = {
   charge: ['KeyN'],
   support: ['KeyY'],
   support2: ['KeyT'],
-  ultimate: ['KeyM'],
+  ultimate: ['KeyM', 'Digit5'],
+  skill1: ['Digit1'],
+  skill2: ['Digit2'],
+  skill3: ['Digit3'],
+  skill4: ['Digit4'],
+  haki: ['KeyR'],
+  step: ['KeyF'],
 };
 
 /** Second player on the keyboard: arrows + numpad cluster (used in 2P mode when no second pad). */
@@ -62,7 +75,13 @@ export const P2_BINDINGS: KeyBinding = {
   charge: ['Numpad6'],
   support: ['Numpad7'],
   support2: ['Numpad9'],
-  ultimate: ['NumpadEnter', 'NumpadAdd'],
+  ultimate: ['NumpadEnter', 'NumpadAdd', 'KeyB'],
+  skill1: ['KeyZ'],
+  skill2: ['KeyX'],
+  skill3: ['KeyC'],
+  skill4: ['KeyV'],
+  haki: ['KeyG'],
+  step: ['KeyQ'],
 };
 /** 1P bindings without the arrow keys (2P keyboard mode). */
 export const P1_BINDINGS_WASD: KeyBinding = { ...P1_BINDINGS, up: ['KeyW'], down: ['KeyS'], left: ['KeyA'], right: ['KeyD'] };
@@ -190,6 +209,12 @@ export class KeyboardInputSource implements InputSource {
   private prevHeld = 0;
   /** Shared gamepad poller; polled once per sample. */
   readonly pad: GamepadState;
+  /**
+   * One Piece control layout. The Storm scheme keeps the face buttons for attack / jump /
+   * chakra; these fighters instead read L1 + face button as their four skills, R1 + ○ as the
+   * finisher, R1 + △ as Armament Haki and a bare R1 tap as the Observation step.
+   */
+  opbrMode = false;
 
   /** Keys pressed since the last sample: a tap shorter than one sim step still registers. */
   private latched = new Set<string>();
@@ -225,6 +250,12 @@ export class KeyboardInputSource implements InputSource {
     if (this.any(b.support)) held |= InputFlag.SUPPORT;
     if (this.any(b.support2)) held |= InputFlag.SUPPORT2;
     if (this.any(b.ultimate)) held |= InputFlag.ULTIMATE;
+    if (this.any(b.skill1)) held |= InputFlag.SKILL1;
+    if (this.any(b.skill2)) held |= InputFlag.SKILL2;
+    if (this.any(b.skill3)) held |= InputFlag.SKILL3;
+    if (this.any(b.skill4)) held |= InputFlag.SKILL4;
+    if (this.any(b.haki)) held |= InputFlag.HAKI;
+    if (this.any(b.step)) held |= InputFlag.STEP;
     if (this.any(b.up)) held |= InputFlag.UP;
     if (this.any(b.down)) held |= InputFlag.DOWN;
 
@@ -253,6 +284,21 @@ export class KeyboardInputSource implements InputSource {
       if (b[PAD.L1]) held |= InputFlag.SUPPORT; // L1: call support 1 (PL_ACT_SUP_COMBO_JOIN)
       if (b[PAD.R1]) held |= InputFlag.SUPPORT2; // R1: call support 2
       if (b[PAD.R3]) held |= InputFlag.SWITCH; // R3: leader switch
+      if (this.opbrMode && (b[PAD.L1] || b[PAD.R1])) {
+        // The palette takes the face buttons over while a shoulder is held.
+        const face = b[PAD.CIRCLE] || b[PAD.TRIANGLE] || b[PAD.SQUARE] || b[PAD.CROSS];
+        held &= ~(InputFlag.ATTACK | InputFlag.JUMP | InputFlag.THROW | InputFlag.CHARGE | InputFlag.JUTSU | InputFlag.SUPPORT | InputFlag.SUPPORT2 | InputFlag.DASH | InputFlag.CHAKRA);
+        if (b[PAD.L1]) {
+          if (b[PAD.CIRCLE]) held |= InputFlag.SKILL1;
+          if (b[PAD.TRIANGLE]) held |= InputFlag.SKILL2;
+          if (b[PAD.SQUARE]) held |= InputFlag.SKILL3;
+          if (b[PAD.CROSS]) held |= InputFlag.SKILL4;
+        } else {
+          if (b[PAD.CIRCLE]) held |= InputFlag.ULTIMATE;
+          if (b[PAD.TRIANGLE]) held |= InputFlag.HAKI;
+          if (!face) held |= InputFlag.STEP;
+        }
+      }
       if (b[PAD.DPAD_UP] || gp.ly > 0.6) held |= InputFlag.UP;
       if (b[PAD.DPAD_DOWN] || gp.ly < -0.6) held |= InputFlag.DOWN;
       // D-pad also moves

@@ -7,7 +7,7 @@
  */
 import * as THREE from 'three';
 import { InputManager, InputSource, ScriptedInputSource } from '../core/InputManager';
-import { CharacterDef, ComboBranch, CombatEvent, CombatEventKind, CombatState, HitDir, HitboxDef, MoveDef, SupportType } from '../core/Types';
+import { CharacterDef, ComboBranch, CombatEvent, CombatEventKind, CombatState, HitDir, HitboxDef, MoveDef, OpbrSkill, SupportType } from '../core/Types';
 import { CombatStats } from './CombatStats';
 import { FighterRig } from '../render/FighterRig';
 
@@ -124,6 +124,17 @@ export class Fighter {
   /** Consecutive ticks spent frozen in hitstop (watchdog). */
   frozenTicks = 0;
 
+  // --- One Piece fighters (def.opbr) -------------------------------------------------------
+  /** Skill currently running (SKILL state). */
+  skill: OpbrSkill | null = null;
+  /** Remaining cooldown per palette slot, in seconds (index 0-3 = S1-S4, 4 = finisher). */
+  skillCooldowns: number[] = [0, 0, 0, 0, 0];
+  /** Frames left on Law's ROOM (extends his skills) / frames left of a counter read. */
+  roomFrames = 0;
+  counterFrames = 0;
+  /** Frames the Armament-Haki coat stays on. */
+  hakiFrames = 0;
+
   /** The definition in force (swapped to `awakenedDef` while awakened). */
   def: CharacterDef;
   readonly baseDef: CharacterDef;
@@ -195,7 +206,7 @@ export class Fighter {
     this.state = next;
     this.stateFrame = 0;
     if (next !== CombatState.JUMPING) this.jumpLaunch = false;
-    if (next !== CombatState.COMBO_STRING && next !== CombatState.JUTSU) {
+    if (next !== CombatState.COMBO_STRING && next !== CombatState.JUTSU && next !== CombatState.SKILL) {
       this.currentMove = null;
       this.moveFrame = 0;
       this.landedHitIds.clear();
@@ -228,6 +239,11 @@ export class Fighter {
   /** Is any armored hitbox currently active (used for jutsu-vs-dash override)? */
   armorActive(): boolean {
     const m = this.currentMove;
+    if (this.state === CombatState.SKILL) {
+      if (!m || !this.skill?.armor) return false;
+      for (const hb of m.hitboxes) if (this.moveFrame >= hb.activeStart - 6 && this.moveFrame <= hb.activeEnd) return true;
+      return this.counterFrames > 0;
+    }
     if (!m || this.state !== CombatState.JUTSU) return false;
     for (const hb of m.hitboxes) if (hb.armored && this.moveFrame >= hb.activeStart - 4 && this.moveFrame <= hb.activeEnd) return true;
     return false;

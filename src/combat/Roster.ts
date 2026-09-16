@@ -12,6 +12,7 @@
 import { CharacterDef, ElementKind, ComboStringDef, HitPriority, HitReaction, HitboxDef, JutsuProjectile, MoveDef, SupportType } from '../core/Types';
 import { NARUTO_DEF, SASUKE_DEF, SOCKET } from './CharacterDefs';
 import { PRM, PrmEntry, PrmHit } from './PrmData';
+import { OPBR_ROSTER, CHOPPER_SUPPORT } from './OpbrRoster';
 
 interface TemplateOpts {
   code: string;
@@ -371,6 +372,10 @@ for (const d of ROSTER) {
   Object.assign(d, CHAKRA[d.code] ?? {});
   if (d.awakenedDef) Object.assign(d.awakenedDef, CHAKRA[d.awakenedDef.code] ?? CHAKRA[d.code] ?? {});
 }
+
+// The One Piece: Fighting Path fighters join the same select screen but keep their own rig,
+// animation set and control layout (see OpbrRoster.ts).
+ROSTER.push(...OPBR_ROSTER, CHOPPER_SUPPORT);
 
 export function findCharacter(code: string | null | undefined): CharacterDef | undefined {
   return ROSTER.find((d) => d.code === code);

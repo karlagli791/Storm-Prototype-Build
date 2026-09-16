@@ -1,0 +1,61 @@
+{
+ "key": "shanks",
+ "weighted": [],
+ "source": "Shanks.dae",
+ "height": 1.0968,
+ "headY": 1.0,
+ "bones": {
+  "hips": "OP_Hips",
+  "spine": "OP_Spine",
+  "chest": "OP_Chest",
+  "neck": "OP_Neck",
+  "head": "OP_Head",
+  "shoulderL": "OP_L_Shoulder",
+  "armL": "OP_L_Arm",
+  "foreL": "OP_L_Fore",
+  "handL": "OP_L_Hand",
+  "shoulderR": "OP_R_Shoulder",
+  "armR": "OP_R_Arm",
+  "foreR": "OP_R_Fore",
+  "handR": "OP_R_Hand",
+  "thighL": "OP_L_Thigh",
+  "calfL": "OP_L_Calf",
+  "footL": "OP_L_Foot",
+  "toeL": "OP_L_Toe",
+  "thighR": "OP_R_Thigh",
+  "calfR": "OP_R_Calf",
+  "footR": "OP_R_Foot",
+  "toeR": "OP_R_Toe",
+  "weapon": "OP_Weapon"
+ },
+ "missing": [],
+ "chains": [
+  {
+   "root": "Bone_Piaodai12",
+   "len": 5
+  },
+  {
+   "root": "Bone_Piaodai01",
+   "len": 4
+  },
+  {
+   "root": "Bone_Piaodai05",
+   "len": 4
+  },
+  {
+   "root": "Bone_Piaodai22",
+   "len": 4
+  },
+  {
+   "root": "Bone_Piaodai17",
+   "len": 4
+  }
+ ],
+ "meshes": [
+  "15012_Body",
+  "15012_Cloak",
+  "15012_Face",
+  "15012_Hair",
+  "15012_Weapon01"
+ ]
+}

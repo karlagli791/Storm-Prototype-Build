@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>OPBR Pose Lab</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      html, body { margin: 0; height: 100%; background: #10131a; color: #dfe6f2; font: 13px/1.5 "Segoe UI", system-ui, sans-serif; overflow: hidden; }
+      canvas { display: block; }
+      #ui { position: fixed; top: 0; left: 0; padding: 10px 12px; background: rgba(8,10,16,.82); border-bottom-right-radius: 10px; display: grid; gap: 6px; max-height: 100vh; overflow: auto; }
+      #ui label { display: flex; gap: 8px; align-items: center; }
+      select, input[type=range], button { background: #1b2130; color: #dfe6f2; border: 1px solid #2c3648; border-radius: 4px; padding: 3px 6px; }
+      #clips { width: 220px; height: 260px; }
+      .row { display: flex; gap: 6px; align-items: center; }
+      b { color: #ffd166; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <div id="ui">
+      <div class="row"><b>OPBR POSE LAB</b></div>
+      <label>Fighter <select id="char"></select></label>
+      <label>Clip <select id="clips" size="14"></select></label>
+      <div class="row">
+        <button id="play">⏵ / ⏸</button>
+        <button id="step">step</button>
+        <span id="frame">0</span>
+      </div>
+      <label>Frame <input id="scrub" type="range" min="0" max="120" step="1" value="0" /></label>
+      <label>Speed <input id="speed" type="range" min="0" max="150" step="5" value="100" /></label>
+      <div class="row">
+        <button data-ang="0">front</button><button data-ang="90">side</button>
+        <button data-ang="180">back</button><button data-ang="45">3/4</button>
+        <button id="spin">turntable</button>
+      </div>
+      <label><input id="bones" type="checkbox" /> show skeleton</label>
+      <div id="info" style="max-width:240px;opacity:.75"></div>
+    </div>
+    <script type="module" src="/src/lab/opbrLab.ts"></script>
+  </body>
+</html>

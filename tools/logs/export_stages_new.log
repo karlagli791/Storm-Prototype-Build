@@ -1,0 +1,84 @@
+=== sd00b01 06:26:55
+06:27:25 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:27:25 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:27:25 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_sd00b01.glb 40174832 meshes 79
+40174832 public/assets/stage_sd00b01.glb
+=== sd00b02 06:27:35
+06:27:47 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:27:47 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:27:47 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_sd00b02.glb 24278376 meshes 130
+24278376 public/assets/stage_sd00b02.glb
+=== sd03d 06:27:48
+06:28:02 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:28:02 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_sd03d.glb 23060352 meshes 232
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+23060352 public/assets/stage_sd03d.glb
+=== sd04b 06:28:03
+06:28:30 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:28:30 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:28:30 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_sd04b.glb 34888884 meshes 210
+34888884 public/assets/stage_sd04b.glb
+=== sd05c 06:28:35
+06:28:45 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:28:45 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:28:45 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_sd05c.glb 17357124 meshes 174
+17357124 public/assets/stage_sd05c.glb
+=== sd05d 06:28:46
+06:28:56 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:28:56 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:28:56 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_sd05d.glb 15054012 meshes 156
+15054012 public/assets/stage_sd05d.glb
+=== sd12a 06:28:57
+06:29:09 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:29:09 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:29:09 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_sd12a.glb 15863320 meshes 98
+15863320 public/assets/stage_sd12a.glb
+=== si00a 06:29:10
+06:29:29 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:29:29 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:29:29 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_si00a.glb 35140164 meshes 245
+35140164 public/assets/stage_si00a.glb
+=== si01a 06:29:34
+06:29:49 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:29:49 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:29:49 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_si01a.glb 18713948 meshes 164
+18713948 public/assets/stage_si01a.glb
+=== si06a 06:29:49
+06:30:03 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:30:03 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:30:03 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_si06a.glb 28251640 meshes 193
+28251640 public/assets/stage_si06a.glb
+=== si08a 06:30:06
+06:30:13 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:30:13 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:30:13 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_si08a.glb 25896076 meshes 45
+25896076 public/assets/stage_si08a.glb
+=== si10b 06:30:16
+06:30:28 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:30:28 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_si10b.glb 27800200 meshes 131
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+27800200 public/assets/stage_si10b.glb
+=== si02a 06:30:30
+06:30:39 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:30:39 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+06:30:39 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/stage_si02a.glb 23775728 meshes 84
+23775728 public/assets/stage_si02a.glb
+=== si09a 06:30:40
+RuntimeError: Error: Python: Traceback (most recent call last):
+AttributeError: 'Mesh' object has no attribute 'bones'
+Error: Python: Traceback (most recent call last):
+AttributeError: 'Mesh' object has no attribute 'bones'
+=== DONE 06:30:46

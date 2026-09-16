@@ -1,0 +1,103 @@
+{
+ "key": "luffy",
+ "weighted": [],
+ "source": "Wano Country Luffy.dae",
+ "height": 1.1953,
+ "headY": 1.0,
+ "bones": {
+  "hips": "OP_Hips",
+  "spine": "OP_Spine",
+  "chest": "OP_Chest",
+  "neck": "OP_Neck",
+  "head": "OP_Head",
+  "shoulderL": "OP_L_Shoulder",
+  "armL": "OP_L_Arm",
+  "foreL": "OP_L_Fore",
+  "handL": "OP_L_Hand",
+  "shoulderR": "OP_R_Shoulder",
+  "armR": "OP_R_Arm",
+  "foreR": "OP_R_Fore",
+  "handR": "OP_R_Hand",
+  "thighL": "OP_L_Thigh",
+  "calfL": "OP_L_Calf",
+  "footL": "OP_L_Foot",
+  "thighR": "OP_R_Thigh",
+  "calfR": "OP_R_Calf",
+  "footR": "OP_R_Foot",
+  "weapon": "OP_Weapon"
+ },
+ "missing": [
+  "toeL",
+  "toeR"
+ ],
+ "chains": [
+  {
+   "root": "bone_qunbai01",
+   "len": 4
+  },
+  {
+   "root": "bone_qunbai05",
+   "len": 4
+  },
+  {
+   "root": "bone_qunbai24",
+   "len": 4
+  },
+  {
+   "root": "bone_qunbai09",
+   "len": 4
+  },
+  {
+   "root": "bone_qunbai13",
+   "len": 4
+  },
+  {
+   "root": "bone_qunbai20",
+   "len": 4
+  },
+  {
+   "root": "bone_yixiu07",
+   "len": 3
+  },
+  {
+   "root": "bone_yixiu10",
+   "len": 3
+  },
+  {
+   "root": "bone_yixiu01",
+   "len": 3
+  },
+  {
+   "root": "bone_yixiu04",
+   "len": 3
+  },
+  {
+   "root": "Bone_Hair01",
+   "len": 2
+  },
+  {
+   "root": "Bone_Hair03",
+   "len": 2
+  },
+  {
+   "root": "Bone_Hair05",
+   "len": 2
+  }
+ ],
+ "meshes": [
+  "11043_01_Body",
+  "11043_02_Body",
+  "11043_Face",
+  "11043_Hair",
+  "11043_Weapon",
+  "maozi",
+  "Weapon_02_R",
+  "Weapon_03",
+  "Weapon_03_R",
+  "Weapon_08",
+  "youjiao",
+  "youshou",
+  "zuojiao",
+  "zuoshou"
+ ]
+}

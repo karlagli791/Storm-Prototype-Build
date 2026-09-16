@@ -1,0 +1,133 @@
+{
+ "key": "shiki",
+ "weighted": [],
+ "source": "Shiki.dae",
+ "height": 1.0955,
+ "headY": 1.0,
+ "bones": {
+  "hips": "OP_Hips",
+  "spine": "OP_Spine",
+  "chest": "OP_Chest",
+  "neck": "OP_Neck",
+  "head": "OP_Head",
+  "shoulderL": "OP_L_Shoulder",
+  "armL": "OP_L_Arm",
+  "foreL": "OP_L_Fore",
+  "handL": "OP_L_Hand",
+  "shoulderR": "OP_R_Shoulder",
+  "armR": "OP_R_Arm",
+  "foreR": "OP_R_Fore",
+  "handR": "OP_R_Hand",
+  "thighL": "OP_L_Thigh",
+  "calfL": "OP_L_Calf",
+  "footL": "OP_L_Foot",
+  "thighR": "OP_R_Thigh",
+  "calfR": "OP_R_Calf",
+  "footR": "OP_R_Foot"
+ },
+ "missing": [
+  "toeL",
+  "toeR",
+  "weapon"
+ ],
+ "chains": [
+  {
+   "root": "Bone_toufa01",
+   "len": 11
+  },
+  {
+   "root": "Bone_pifeng66",
+   "len": 10
+  },
+  {
+   "root": "Bone_toufa26",
+   "len": 8
+  },
+  {
+   "root": "Bone_toufa27",
+   "len": 8
+  },
+  {
+   "root": "Bone_pifeng34",
+   "len": 7
+  },
+  {
+   "root": "Bone_pifeng01",
+   "len": 7
+  },
+  {
+   "root": "Bone_qunbai06",
+   "len": 4
+  },
+  {
+   "root": "Bone_yaodai01",
+   "len": 4
+  },
+  {
+   "root": "Bone_qunbai22",
+   "len": 3
+  },
+  {
+   "root": "Bone_qunbai23",
+   "len": 3
+  },
+  {
+   "root": "Bone_qunbai24",
+   "len": 3
+  },
+  {
+   "root": "Bone_qunbai25",
+   "len": 3
+  },
+  {
+   "root": "Bone_qunbai18",
+   "len": 3
+  },
+  {
+   "root": "Bone_qunbai19",
+   "len": 3
+  },
+  {
+   "root": "Bone_qunbai20",
+   "len": 3
+  },
+  {
+   "root": "Bone_qunbai21",
+   "len": 3
+  },
+  {
+   "root": "Bone_qunbai01",
+   "len": 3
+  },
+  {
+   "root": "Bone_qunbai03",
+   "len": 3
+  },
+  {
+   "root": "Bone_qunbai05",
+   "len": 3
+  },
+  {
+   "root": "Bone_xiubai01",
+   "len": 2
+  },
+  {
+   "root": "Bone_xiubai02",
+   "len": 2
+  },
+  {
+   "root": "Bone_qunbai02",
+   "len": 2
+  },
+  {
+   "root": "Bone_qunbai04",
+   "len": 2
+  }
+ ],
+ "meshes": [
+  "0_Face",
+  "Body",
+  "Body_a",
+  "Hair"
+ ]
+}

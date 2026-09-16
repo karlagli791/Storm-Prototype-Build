@@ -1,0 +1,40 @@
+== law
+RENDERED stand_op_law.png
+RENDERED face_op_law.png
+== sabo
+RENDERED stand_op_sabo.png
+RENDERED face_op_sabo.png
+== katakuri
+STRIP 15025_03_Weapon
+STRIP 15025_04_Weapon
+STRIP 15025_05_Weapon
+RENDERED stand_op_katakuri.png
+RENDERED face_op_katakuri.png
+== fujitora
+RENDERED stand_op_fujitora.png
+RENDERED face_op_fujitora.png
+== kuma
+RENDERED stand_op_kuma.png
+RENDERED face_op_kuma.png
+== burgess
+RENDERED stand_op_burgess.png
+RENDERED face_op_burgess.png
+== shiki
+RENDERED stand_op_shiki.png
+RENDERED face_op_shiki.png
+== karasu
+RENDERED stand_op_karasu.png
+RENDERED face_op_karasu.png
+== koby
+RENDERED stand_op_koby.png
+RENDERED face_op_koby.png
+   art: op_law
+   art: op_sabo
+   art: op_katakuri
+   art: op_fujitora
+   art: op_kuma
+   art: op_burgess
+   art: op_shiki
+   art: op_karasu
+   art: op_koby
+DONE 9 characters

@@ -201,3 +201,20 @@ Sound effects are Storm 2's own, decoded from the game's nus3bank files with vgm
 - Storm 4's `2nrt` has a 3-clip neutral string; the fourth hit and branch moves reuse `cmb` clips.
 - The Rasengan / Chidori palm dummy (`eff dmy01`) lives in the `eff1` container, which is not
   imported; the hitbox binds to the right-hand bone instead.
+
+### One Piece fighters
+
+Twelve *One Piece: Fighting Path* characters (Luffy, Law, Sabo, Shanks, Katakuri, Fujitora, Kuma,
+Burgess, Shiki, Karasu, Koby, Chopper) share the roster but not the control scheme. Their models
+carry no animation data, so the engine animates them procedurally (`src/render/OpbrRig.ts`); their
+moves sit on a Fighting-Path style skill palette:
+
+| Keyboard | Pad | Action |
+| --- | --- | --- |
+| 1 / 2 / 3 / 4 | L1 + ○ / △ / □ / ✕ | Skills 1-4 — each costs gauge and has its own cooldown |
+| 5 | R1 + ○ | Finisher (full gauge) |
+| R | R1 + △ | Armament Haki — 12 s, +25 % damage, super armour on skills |
+| F | R1 (tap) | Observation step — short invulnerable sidestep |
+| J | ○ | Combo string, launcher and tilt branches as usual |
+
+Tuning their animation: `npm run dev`, then open `/opbr_lab.html` — every pose clip, frame by frame.

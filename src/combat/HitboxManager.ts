@@ -63,7 +63,7 @@ export class HitboxManager {
 
     // 3. Melee / jutsu hitboxes vs hurtboxes
     for (const attacker of fighters) {
-      if (attacker.state !== CombatState.COMBO_STRING && attacker.state !== CombatState.JUTSU && attacker.state !== CombatState.SUPPORT_ACT && attacker.state !== CombatState.ULTIMATE) continue;
+      if (attacker.state !== CombatState.COMBO_STRING && attacker.state !== CombatState.JUTSU && attacker.state !== CombatState.SUPPORT_ACT && attacker.state !== CombatState.ULTIMATE && attacker.state !== CombatState.SKILL) continue;
       const boxes = attacker.state === CombatState.JUTSU && attacker.def.jutsuProjectile ? [] : attacker.activeHitboxes();
       if (!boxes.length && !this.debug) continue;
       for (const defender of fighters) {

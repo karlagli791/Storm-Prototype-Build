@@ -10,8 +10,16 @@ argv = sys.argv[sys.argv.index("--") + 1:]
 code, out_dir = argv[0], argv[1]
 rest = argv[2:]
 pose_files = []
+strip_re = None
+head_frame = False
 if '--pose' in rest:
     i = rest.index('--pose'); pose_files = rest[i + 1:]; rest = rest[:i]
+# One Piece models ship transformation and weapon meshes the game hides; drop them so the art is
+# framed on the character and not on a Gear-4 balloon arm or a floating sword.
+if '--strip' in rest:
+    i = rest.index('--strip'); strip_re = rest[i + 1]; rest = rest[:i] + rest[i + 2:]
+if '--head' in rest:
+    head_frame = True; rest = [r for r in rest if r != '--head']
 files = rest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.makedirs(out_dir, exist_ok=True)
@@ -29,11 +37,25 @@ else:
         for path in files:
             bpy.ops.import_scene.xfbin(directory=os.path.dirname(path), files=[{"name": os.path.basename(path)}])
 
+import re as _re
+if strip_re:
+    rx = _re.compile(strip_re, _re.I)
+    for o in list(bpy.data.objects):
+        if o.type == 'MESH' and rx.search(o.name):
+            print('STRIP', o.name)
+            bpy.data.objects.remove(o, do_unlink=True)
 arm = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
 keep = {arm}
 for o in bpy.data.objects:
     if o.type == 'MESH' and (o.parent == arm or any(m.type == 'ARMATURE' for m in o.modifiers)) and not any(k in o.name.lower() for k in ('_lod', 'shadow')):
         keep.add(o)
+# Keep the parent chain too: deleting an ancestor empty leaves its children with their local
+# transform, which silently rescales the whole model (the Koby rip sits under a 0.01 empty).
+for o in list(keep):
+    p_ = o.parent
+    while p_ is not None:
+        keep.add(p_)
+        p_ = p_.parent
 for o in list(bpy.data.objects):
     if o not in keep:
         bpy.data.objects.remove(o, do_unlink=True)
@@ -148,7 +170,17 @@ def shoot(name, res, target_z, size_z, yaw_deg=22, pitch_deg=88):
 # full body stand (portrait aspect like the Storm 2 art: 768x1248)
 scene.render.resolution_percentage = 100
 shoot(f"stand_{code}.png", (768, 1248), cz, h * 1.06, yaw_deg=18)
-# face: top ~22% of the body
-face_c = mx.z - h * 0.09
-shoot(f"face_{code}.png", (512, 512), face_c, h * 0.26, yaw_deg=14, pitch_deg=86)
+# face: top ~22% of the body, or centred on the head bone when asked for (hats and hair make the
+# bounding box a poor guide on the One Piece models).
+if head_frame:
+    hb = next((b for b in arm.data.bones if b.name in ('OP_Head', 'OP_Neck')), None)
+    if hb:
+        hw = arm.matrix_world @ hb.head_local
+        cx, cy = hw.x, hw.y
+        face_c = hw.z + h * 0.055
+    else:
+        face_c = mx.z - h * 0.09
+else:
+    face_c = mx.z - h * 0.09
+shoot(f"face_{code}.png", (512, 512), face_c, h * 0.3, yaw_deg=14, pitch_deg=86)
 print('DONE')

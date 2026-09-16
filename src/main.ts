@@ -25,6 +25,7 @@ import { AIBrain } from './combat/AIBrain';
 import { DualTargetCamera } from './systems/DualTargetCamera';
 import { ArenaEnvironment } from './systems/ArenaEnvironment';
 import { Effects, GuardSphere } from './render/Effects';
+import { OpbrFX } from './render/OpbrFX';
 import { UIOverlay, HudFighterData } from './ui/UIOverlay';
 import { Projectiles } from './combat/Projectiles';
 import { SupportSystem } from './combat/SupportSystem';
@@ -77,7 +78,7 @@ export const STAGES: StageOption[] = [
 
 const ROUND_SECONDS = 99;
 const ZERO3 = new THREE.Vector3();
-const WATCH_STATES: ReadonlySet<CombatState> = new Set([CombatState.HITSTUN, CombatState.LAUNCHED, CombatState.TUMBLE, CombatState.CRUMPLE, CombatState.KNOCKDOWN, CombatState.WALL_SPLAT, CombatState.BLOCKSTUN, CombatState.GUARD_BREAK, CombatState.SUBSTITUTED, CombatState.DODGE, CombatState.DASH_IMPACT, CombatState.THROW]);
+const WATCH_STATES: ReadonlySet<CombatState> = new Set([CombatState.HITSTUN, CombatState.LAUNCHED, CombatState.TUMBLE, CombatState.CRUMPLE, CombatState.KNOCKDOWN, CombatState.WALL_SPLAT, CombatState.BLOCKSTUN, CombatState.GUARD_BREAK, CombatState.SUBSTITUTED, CombatState.DODGE, CombatState.DASH_IMPACT, CombatState.THROW, CombatState.SKILL]);
 
 class Game implements EventSink {
   renderer: THREE.WebGLRenderer;
@@ -85,6 +86,8 @@ class Game implements EventSink {
   camera: DualTargetCamera;
   arena = new ArenaEnvironment();
   effects = new Effects();
+  /** Effects for the One Piece skills (Devil Fruits, Haki, crows, gravity). */
+  opbrFx = new OpbrFX(this.effects);
   hud: UIOverlay;
   fsm: CombatStateMachine;
   hitboxes: HitboxManager;
@@ -191,6 +194,8 @@ class Game implements EventSink {
     this.scene.add(this.projectiles.group);
     this.support = new SupportSystem(this.fsm, this.projectiles, this.effects, this);
     this.fsm.projectiles = this.projectiles;
+    this.fsm.opbrFx = this.opbrFx;
+    this.scene.add(this.opbrFx.group);
     this.fsm.hasCinematicCam = (clip) => this.ultCams.has(clip);
 
     // CC2 celshade ramp (system/celshade.tex, row 8 = three-band character ramp)
@@ -245,6 +250,8 @@ class Game implements EventSink {
     // Player 1: keyboard + first pad (the attract demo hands the leader to a second AI brain).
     const kb = new KeyboardInputSource(mode === '2p' && SETTINGS.p2Device === 'KEYBOARD' ? P1_BINDINGS_WASD : P1_BINDINGS, window, 0);
     this.p1Source = kb;
+    // A One Piece leader switches that pad to the Fighting Path layout (L1 skill palette).
+    kb.opbrMode = !!sel.p1.leader.opbr;
     const p1Src: InputSource = mode === 'demo' ? new ScriptedInputSource() : kb;
     const mk = (def: CharacterDef, src: InputSource) => new Fighter(def, new InputManager(src));
     const p1Lead = mk(sel.p1.leader, p1Src);
@@ -253,6 +260,7 @@ class Game implements EventSink {
 
     // Player 2: second pad / keyboard cluster in VS PLAYER, otherwise the AI brain (or a dummy).
     const p2Src: InputSource = mode === '2p' ? new KeyboardInputSource(P2_BINDINGS, window, SETTINGS.p2Device === 'KEYBOARD' ? 99 : 1) : new ScriptedInputSource();
+    if (p2Src instanceof KeyboardInputSource) p2Src.opbrMode = !!sel.p2.leader.opbr;
     const p2Lead = mk(sel.p2.leader, p2Src);
     const p2Sups = sel.p2.supports.map((d, i) => { const f = mk(d, new ScriptedInputSource()); f.supportType = sel.p2.types[i] ?? d.supportType; return f; });
     this.team2 = new Team('P2', 2, p2Lead, p2Sups, p2Src);
@@ -450,11 +458,12 @@ class Game implements EventSink {
           this.postfx.aberration(0.9);
           if (victim && victim.grounded) this.effects.groundCrack(victim.position.clone().setY(victim.groundY), 1.3);
         } else if (victim) this.effects.gust(victim.position.clone().setY(victim.groundY), 1.4);
-        if (victim) this.audio.voice(victim.def.voiceCode ?? (victim.def.code === '9ind' ? '2ssk' : victim.def.code), (data.damage ?? 0) >= 150 ? 'dmgL_02' : heavy ? 'dmgM_02' : 'dmgS_02', { volume: 0.8 });
+        // The One Piece fighters have no CC2 voice bank; their hits stay on the SFX layer.
+        if (victim && !victim.def.opbr) this.audio.voice(victim.def.voiceCode ?? (victim.def.code === '9ind' ? '2ssk' : victim.def.code), (data.damage ?? 0) >= 150 ? 'dmgL_02' : heavy ? 'dmgM_02' : 'dmgS_02', { volume: 0.8 });
         break;
       }
       case 'GUARD_HIT': this.audio.play('guard', { pitchVar: 0.05 }); break;
-      case 'GUARD_BREAK': { this.audio.play('exp1', { volume: 0.9 }); const vv = this.allFighters.find((f) => f.id === data.defenderId); if (vv) { this.audio.voice(vv.def.code, 'grdBrk_02'); this.postfx.shockwave(vv.position.clone().setY(vv.position.y + 1), this.camera.camera, 0.7, 0.4); this.postfx.impactFrame(0.7, 0xcfe8ff); } break; }
+      case 'GUARD_BREAK': { this.audio.play('exp1', { volume: 0.9 }); const vv = this.allFighters.find((f) => f.id === data.defenderId); if (vv) { if (!vv.def.opbr) this.audio.voice(vv.def.code, 'grdBrk_02'); this.postfx.shockwave(vv.position.clone().setY(vv.position.y + 1), this.camera.camera, 0.7, 0.4); this.postfx.impactFrame(0.7, 0xcfe8ff); } break; }
       case 'PARRY': this.audio.play('flash2'); break;
       case 'CLASH': this.audio.play('chakHit'); break;
       case 'SUB': this.audio.play('change'); break;
@@ -616,7 +625,7 @@ class Game implements EventSink {
       w.velocity.z = 0;
     }
     this.effects.el.aura(w.def.element ?? 'wind', w.position.clone().setY(w.groundY), w.def.chakraColor ?? (w.def.color as number), 1.6);
-    this.audio.voice(w.def.voiceCode ?? w.def.code, 'powerUP', { volume: 0.8 * SETTINGS.voice });
+    if (!w.def.opbr) this.audio.voice(w.def.voiceCode ?? w.def.code, 'powerUP', { volume: 0.8 * SETTINGS.voice });
   }
 
   private applyWinCamera(dt: number): boolean {
@@ -658,7 +667,8 @@ class Game implements EventSink {
       if (prev === f.state) continue;
       this.prevStates.set(f.id, f.state);
       const code = f.def.voiceCode ?? (f.def.animBank && !f.def.jutsuSfx ? f.def.animBank : f.def.code);
-      const v = (cue: string) => this.audio.voice(code === '9ind' ? '2ssk' : code, cue, { volume: 0.85 * SETTINGS.voice });
+      // One Piece fighters have no CC2 voice bank — they stay silent on the voice layer.
+      const v = (cue: string) => { if (!f.def.opbr) this.audio.voice(code === '9ind' ? '2ssk' : code, cue, { volume: 0.85 * SETTINGS.voice }); };
       this.stateVfx(f, prev ?? CombatState.IDLE_NEUTRAL);
       switch (f.state) {
         case CombatState.DASH_STARTUP: this.audio.play('dash', { volume: 0.7 }); v('ckrDash_01'); break;
@@ -668,6 +678,8 @@ class Game implements EventSink {
         case CombatState.IDLE_NEUTRAL:
         case CombatState.RUNNING: if (prev === CombatState.JUMPING || prev === CombatState.NINJA_MOVE) this.audio.play('landing', { volume: 0.5 }); break;
         case CombatState.JUTSU: this.audio.play(f.def.jutsuSfx ?? 'rasen', { volume: 0.9 }); v('skill01_01'); break;
+        // One Piece skill: a heavy whoosh on start-up, the effects carry the rest.
+        case CombatState.SKILL: this.audio.play(f.skill?.cinematic ? 'awakeFlash' : 'flash', { volume: 0.7 }); break;
         case CombatState.THROW: this.audio.play('shuriken', { volume: 0.7 }); if (Math.random() < 0.5) v('throw'); break;
         case CombatState.CHAKRA_CHARGE: this.audio.play('charge', { volume: 0.6 }); v('ckrCharge_01'); break;
         case CombatState.COMBO_STRING: this.audio.play(f.def.hasBlade ? 'sword_swing' : 'punch_swing', { volume: 0.45, pitchVar: 0.08 }); v(f.comboBranch === 'AIR' ? 'atkM_02' : 'atkS_02'); break;
@@ -875,13 +887,14 @@ class Game implements EventSink {
     this.sun.target.position.copy(mid);
     this.sun.position.copy(mid).add(new THREE.Vector3(20, 40, 15));
     this.effects.update(dt);
+    this.opbrFx.update(dt);
     this.camera.dashTarget = a1.state === CombatState.DASH_HOMING || a1.state === CombatState.DASH_STARTUP || a1.state === CombatState.SPARK_DASH ? 1 : 0;
     if (!this.applyIntroCamera() && !this.applyKoCamera(dt) && !this.applyWinCamera(dt) && !this.applyCinematicCamera()) this.camera.update(this.team1.active.rig.root.position, this.team2.active.rig.root.position, dt);
     if (background) return;
     // Smear frames on fast travel, radial blur while P1 dashes, chakra heat around jutsu.
     for (const f of [...this.team1.present, ...this.team2.present]) {
       const sp = Math.hypot(f.velocity.x, f.velocity.z);
-      const streak = SETTINGS.postFx && sp > 9 && (f.state === CombatState.COMBO_STRING || f.state === CombatState.JUTSU || f.state === CombatState.SPARK_DASH || f.state === CombatState.DASH_HOMING || f.state === CombatState.TUMBLE || (f.state === CombatState.ULTIMATE && f.ultimatePhase === 1));
+      const streak = SETTINGS.postFx && sp > 9 && (f.state === CombatState.COMBO_STRING || f.state === CombatState.JUTSU || f.state === CombatState.SKILL || f.state === CombatState.SPARK_DASH || f.state === CombatState.DASH_HOMING || f.state === CombatState.TUMBLE || (f.state === CombatState.ULTIMATE && f.ultimatePhase === 1));
       if (streak) { this.smearTmp.set(f.velocity.x, f.velocity.y * 0.3, f.velocity.z).multiplyScalar(0.022); if (this.smearTmp.length() > 0.55) this.smearTmp.setLength(0.55); f.rig.setSmear(this.smearTmp); }
       else f.rig.setSmear(ZERO3);
     }
@@ -923,6 +936,25 @@ class Game implements EventSink {
       human: team === this.team1 ? this.mode !== 'demo' : this.mode === '2p',
       awakened: f.awakened,
       ultimateReady: s.chakra >= 90,
+      gaugeName: f.def.opbr?.gaugeName,
+      haki: f.hakiFrames > 0,
+      skills: f.def.opbr
+        ? [...f.def.opbr.skills.map((sk, i) => ({
+            name: sk.name,
+            button: ['L1+O', 'L1+/\\', 'L1+[]', 'L1+X'][i] ?? `S${i + 1}`,
+            cooldown: f.skillCooldowns[i],
+            max: sk.cooldown,
+            cost: sk.cost,
+            ready: f.skillCooldowns[i] <= 0 && s.chakra >= sk.cost,
+          })), {
+            name: f.def.opbr.ultimate.name,
+            button: 'R1+O',
+            cooldown: 0,
+            max: 0,
+            cost: f.def.opbr.ultimate.cost,
+            ready: s.chakra >= f.def.opbr.ultimate.cost,
+          }]
+        : undefined,
       act: bindingFor(f.state, { moveClip: null, moveDir: f.moveDirLocal, hitDir: f.lastHitDir, airborne: !f.grounded, falling: f.velocity.y < -0.5, stateFrame: f.stateFrame, framesLeft: f.stunFrames }).act,
     };
   }

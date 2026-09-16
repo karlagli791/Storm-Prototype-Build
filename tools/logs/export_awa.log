@@ -1,0 +1,71 @@
+=== 2nrv 08:08:40 : raw/s4/2nrvbod1.xfbin raw/s4/2nrvawa.xfbin
+08:08:53 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:08:53 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:08:53 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:08:53 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:08:53 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:08:53 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:08:53 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/2nrv.glb 10751432
+-rw-r--r-- 1 ysoyo 197609 10751432 Sep 15 08:10 public/assets/2nrv.glb
+=== 2ssv 08:10:08 : raw/s4/2ssvbod1.xfbin raw/s4/2ssvawa.xfbin
+08:10:22 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:10:22 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:10:22 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:10:22 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:10:22 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:10:22 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/2ssv.glb 12147228
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+-rw-r--r-- 1 ysoyo 197609 12147228 Sep 15 08:11 public/assets/2ssv.glb
+=== 2gar 08:11:34 : raw/s4/2garbod1.xfbin raw/s4/2garbod1c.xfbin raw/s4/2garbod1l.xfbin raw/s4/2garskl1.xfbin raw/s4/2garacc1.xfbin raw/s4/2garspl1.xfbin raw/s4/2garaws.xfbin
+08:11:55 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:11:55 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:11:55 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:11:55 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:11:55 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:11:55 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:11:55 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/2gar.glb 13755680
+-rw-r--r-- 1 ysoyo 197609 13755680 Sep 15 08:13 public/assets/2gar.glb
+=== 2itc 08:13:32 : raw/s4/2itcbod1.xfbin raw/s4/2itcbod1c.xfbin raw/s4/2itcbod1l.xfbin raw/s4/2itcskl1.xfbin raw/s4/2itcacc1.xfbin raw/s4/2itcspl1.xfbin raw/s4/2itcaws.xfbin
+08:14:01 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:14:01 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:14:01 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:14:01 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:14:01 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:14:01 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/2itc.glb 15953264
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+-rw-r--r-- 1 ysoyo 197609 15953264 Sep 15 08:16 public/assets/2itc.glb
+=== 2ddr 08:16:05 : raw/s4/2ddrbod1.xfbin raw/s4/2ddrbod1c.xfbin raw/s4/2ddrbod1l.xfbin raw/s4/2ddrskl1.xfbin raw/s4/2ddracc1.xfbin raw/s4/2ddrspl1.xfbin raw/s4/2ddrawa.xfbin
+08:16:43 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:16:43 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:16:43 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:16:43 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:16:43 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:16:43 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/2ddr.glb 24005508
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+-rw-r--r-- 1 ysoyo 197609 24005508 Sep 15 08:22 public/assets/2ddr.glb
+=== 2nrt 08:22:19 : raw/s4/2nrtbod1.xfbin raw/2nrtbod1c.xfbin raw/2nrtbod1l.xfbin raw/s4/2nrtskl1.xfbin raw/s4/2nrtspl1.xfbin raw/s4/2nrtawa.xfbin
+08:22:54 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:22:54 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:22:54 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:22:54 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:22:54 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:22:54 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/2nrt.glb 16397432
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+-rw-r--r-- 1 ysoyo 197609 16397432 Sep 15 08:25 public/assets/2nrt.glb
+=== 2ssk 08:25:26 : raw/s4/2sskbod1.xfbin raw/2sskbod1c.xfbin raw/2sskbod1l.xfbin raw/s4/2sskskl1.xfbin raw/s4/2sskacc1.xfbin raw/s4/2sskspl1.xfbin
+08:25:44 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:25:44 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:25:44 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:25:44 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:25:44 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+08:25:44 | WARNING: The active Vertex Color will not be exported, as it is not used in the node tree of the material
+EXPORTED public/assets/2ssk.glb 17122156
+Error: Not freed memory blocks: 1, total unfreed memory 0.000008 MB
+-rw-r--r-- 1 ysoyo 197609 17122156 Sep 15 08:28 public/assets/2ssk.glb
+=== DONE 08:28:48

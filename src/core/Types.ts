@@ -110,6 +110,8 @@ export enum CombatState {
   DODGE = 'DODGE',
   /** Victory pose after the round (win10 / win11). */
   WIN = 'WIN',
+  /** One Piece fighters: a skill from the L1 palette (their jutsu equivalent). */
+  SKILL = 'SKILL',
 }
 
 /** States in which an incoming hit can be substituted out of. */
@@ -170,6 +172,7 @@ export const VULNERABLE_STATES: ReadonlySet<CombatState> = new Set([
   CombatState.BLOCKSTUN,
   CombatState.CHAKRA_CHARGE,
   CombatState.THROW,
+  CombatState.SKILL,
 ]);
 
 /** Hit direction relative to the victim's facing (selects the CC2 directional damage clip). */
@@ -202,6 +205,15 @@ export enum InputFlag {
   ULTIMATE = 1 << 13,
   /** Second support (R1 / T). */
   SUPPORT2 = 1 << 14,
+  /** One Piece skill palette (L1 + face buttons / keys 1-4). */
+  SKILL1 = 1 << 15,
+  SKILL2 = 1 << 16,
+  SKILL3 = 1 << 17,
+  SKILL4 = 1 << 18,
+  /** Armament Haki coat (R1 + Triangle / R). */
+  HAKI = 1 << 19,
+  /** Observation-Haki step (R1 tap / F). */
+  STEP = 1 << 20,
 }
 
 export interface InputFrame {
@@ -299,6 +311,84 @@ export interface ComboStringDef {
   moves: MoveDef[];
 }
 
+/** Effects the One Piece skills trigger, played by OpbrFX. */
+export type OpbrFxKind =
+  | 'haki' | 'haki_burst' | 'conqueror' | 'slash' | 'impact' | 'shock' | 'dust'
+  | 'fire' | 'fire_trail' | 'gum' | 'room' | 'shambles' | 'gamma' | 'gravity' | 'meteor'
+  | 'mochi' | 'paw' | 'pawprint' | 'crow' | 'lion' | 'blade_arc' | 'wind' | 'quake';
+
+export interface OpbrFxEvent {
+  /** Move frame the effect fires on. */
+  t: number;
+  kind: OpbrFxKind;
+  /** Socket the effect is anchored to (defaults to the right hand). */
+  socket?: string;
+  scale?: number;
+  color?: number;
+  /** Metres in front of the fighter (instead of a socket). */
+  ahead?: number;
+  sfx?: string;
+}
+
+/** Movement applied during a skill (a lunge, a hop, a slide). */
+export interface OpbrTravel {
+  t: number;
+  frames: number;
+  speed: number;
+  up?: number;
+}
+
+export interface OpbrSkill {
+  id: string;
+  name: string;
+  desc: string;
+  /** Which palette button fires it. */
+  input: 'S1' | 'S2' | 'S3' | 'S4' | 'ULT';
+  /** Haki cost and cooldown in seconds (Fighting Path style per-skill cooldowns). */
+  cost: number;
+  cooldown: number;
+  move: MoveDef;
+  fx?: OpbrFxEvent[];
+  travel?: OpbrTravel;
+  projectile?: JutsuProjectile & { t: number };
+  /** Super armour through the active frames. */
+  armor?: boolean;
+  /** Cinematic finish: camera push-in, slow motion and a full-screen flash. */
+  cinematic?: boolean;
+  /** Counter stance: absorbs one hit during the active window and answers it. */
+  counter?: boolean;
+  /** Teleport behind the target instead of travelling (Law's Shambles). */
+  teleport?: boolean;
+}
+
+/** A One Piece: Fighting Path fighter — own rig, own animation set, own control layout. */
+export interface OpbrProfile {
+  /** Model key (public/assets/op_<key>.glb). */
+  key: string;
+  /** Standing height in metres — these fighters differ wildly (Chopper 0.9 m, Kuma 2.9 m). */
+  height: number;
+  /** Never touches the ground (Shiki and Karasu fly). */
+  float?: boolean;
+  /** Armament-Haki coat colour and the gauge name shown in the HUD. */
+  hakiColor?: number;
+  gaugeName?: string;
+  /** The four palette skills plus the finisher. */
+  skills: OpbrSkill[];
+  ultimate: OpbrSkill;
+  /** Fighting-style blurb for the move list. */
+  style?: string;
+  /** Extra body swapped in for a transformation (Karasu's crow form). */
+  altGlb?: string;
+  /**
+   * Meshes the rip ships for a transformed state (Luffy's Gear-4 balloon limbs, Katakuri's mochi
+   * weapons). Hidden at rest and shown while the matching state is active.
+   */
+  altMesh?: string;
+  altMode?: 'haki' | 'skill';
+  /** Weapon handling: leave it where the rip parked it, carry it in the right hand, or hide it. */
+  weapon?: 'keep' | 'hand' | 'hide';
+}
+
 export interface CharacterDef {
   code: string; // 2nrt / 2ssk
   displayName: string;
@@ -356,6 +446,8 @@ export interface CharacterDef {
   ultimateSfx?: string;
   /** Ranged jutsu: the skill launches a projectile instead of a palm hitbox. */
   jutsuProjectile?: JutsuProjectile;
+  /** One Piece fighter: procedural rig, skill palette and its own control layout. */
+  opbr?: OpbrProfile;
 }
 
 export interface JutsuProjectile {

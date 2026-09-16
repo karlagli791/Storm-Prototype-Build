@@ -13,6 +13,8 @@ import { CharacterDef, CombatState, HitDir } from '../core/Types';
 import { bindingFor, ClipSpec } from '../combat/StormStates';
 import { SOCKET } from '../combat/CharacterDefs';
 import { addInvertedHull, createCelMaterial, setRamp } from './Shaders';
+import { OpbrRig } from './OpbrRig';
+import { opbrClipFor } from './OpbrPoses';
 
 export interface PoseContext {
   state: CombatState;
@@ -87,6 +89,15 @@ export class FighterRig {
   private parts: Record<string, THREE.Object3D> = {};
   private bladeGroup: THREE.Group | null = null;
   public usingGlb = false;
+  /** One Piece fighters are animated procedurally instead of from clips (see OpbrRig). */
+  opbr: OpbrRig | null = null;
+  /** Transformation meshes (hidden unless the state that uses them is active). */
+  private altMeshes: THREE.Object3D[] = [];
+
+  /** Show or hide the transformation meshes (Gear 4, mochi weapons). */
+  setAltMeshes(on: boolean): void {
+    for (const m of this.altMeshes) m.visible = on;
+  }
 
   constructor(private def: CharacterDef) {
     this.buildMannequin();
@@ -280,13 +291,18 @@ export class FighterRig {
       const loader = new GLTFLoader();
       const gltf = await loader.loadAsync(this.def.glbPath);
       const scene = gltf.scene;
-      // Normalize height to ~1.85 m
-      const box = new THREE.Box3().setFromObject(scene);
-      const size = new THREE.Vector3();
-      box.getSize(size);
-      const s = size.y > 1e-3 ? 1.85 / size.y : 1;
+      const opbr = this.def.opbr;
+      // One Piece rips are normalised at import time (head bone at y = 1), so they scale by the
+      // character's real height instead of being squashed into the CC2 1.85 m box.
+      const s = opbr ? opbr.height / 1.12 : (() => {
+        const box = new THREE.Box3().setFromObject(scene);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const k = size.y > 1e-3 ? 1.85 / size.y : 1;
+        scene.position.y = -box.min.y * k;
+        return k;
+      })();
       scene.scale.setScalar(s);
-      scene.position.y = -box.min.y * s;
 
       // Cel-shade every mesh
       scene.traverse((o) => {
@@ -343,6 +359,40 @@ export class FighterRig {
       }
       const rootB = find([/ pelvis$/, /^root$|hips|pelvis|center/]);
       if (rootB) this.sockets.set(SOCKET.ROOT, rootB);
+
+      if (opbr) {
+        // Procedural backend: a pivot carries the body so pose clips can move and tilt it.
+        const pivot = new THREE.Group();
+        pivot.add(scene);
+        const rig = new OpbrRig();
+        rig.weaponMode = opbr.weapon === 'hand' ? 'hand' : 'keep';
+        if (rig.bind(scene, pivot)) {
+          if (opbr.weapon === 'hide') {
+            scene.traverse((o) => {
+              if ((o as THREE.Mesh).isMesh && /weapon|sword|katana/i.test(o.name || o.parent?.name || '')) o.visible = false;
+            });
+          }
+          // Transformation parts (Gear 4 limbs, mochi weapons) start hidden.
+          if (opbr.altMesh) {
+            const re = new RegExp(opbr.altMesh);
+            scene.traverse((o) => {
+              if (!(o as THREE.Mesh).isMesh) return;
+              const name = o.name || o.parent?.name || '';
+              if (re.test(name)) { this.altMeshes.push(o); o.visible = false; }
+            });
+          }
+          for (const [k, v] of rig.sockets) this.sockets.set(k, v);
+          this.opbr = rig;
+          this.root.remove(this.mannequin);
+          this.root.add(pivot);
+          this.glbRoot = pivot;
+          this.usingGlb = true;
+          if (RIG_RAMP.texture) setRamp(scene, RIG_RAMP.texture, RIG_RAMP.row);
+          return true;
+        }
+        console.warn(`[FighterRig] ${this.def.code}: OP_* bones missing, falling back to the mannequin`);
+        return false;
+      }
 
       this.mixer = new THREE.AnimationMixer(scene);
       // CC2 clips carry root motion on the root / "trall" bones. The simulation moves the
@@ -429,6 +479,13 @@ export class FighterRig {
   // ------------------------------------------------------------- animation
   update(ctx: PoseContext, dt: number): void {
     this.time += dt;
+    if (this.opbr) {
+      const pick = opbrClipFor(ctx, !!this.def.opbr?.float);
+      this.opbr.play(pick.name, pick.frame !== undefined && pick.frame <= 1);
+      if (pick.frame !== undefined) this.opbr.setFrame(pick.frame);
+      this.opbr.update(ctx, dt);
+      return;
+    }
     if (this.usingGlb && this.mixer) {
       this.updateGlbAnimation(ctx, dt);
       return;
@@ -456,7 +513,7 @@ export class FighterRig {
     return t;
   }
 
-  hasClip(name: string): boolean { return this.clips.has(name); }
+  hasClip(name: string): boolean { return this.opbr ? this.opbr.hasClip(name.replace(/^op:/, '')) : this.clips.has(name); }
   clipDuration(name: string): number { return this.clips.get(name)?.duration ?? 0; }
 
   /** Keep the shadow on the ground: `height` is the body's height above the floor. */

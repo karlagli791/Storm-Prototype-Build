@@ -84,6 +84,34 @@ export class AIBrain {
     const towardX = this.tmp.dot(cam.right);
     const towardY = this.tmp.dot(cam.forward);
 
+    // One Piece fighters fight from their skill palette instead of the jutsu button: pick a skill
+    // that is off cooldown, affordable and sensible at this range, plus the Haki coat and the
+    // finisher when the gauge is full.
+    if (f.def.opbr && this.tapTimer <= 0 && (f.state === CombatState.IDLE_NEUTRAL || f.state === CombatState.RUNNING || f.state === CombatState.COMBO_STRING)) {
+      const prof = f.def.opbr;
+      if (f.hakiFrames <= 0 && f.stats.chakra >= 55 && this.rng() < 0.03) {
+        this.tap(InputFlag.HAKI);
+        this.tapTimer = 1.4;
+      } else if (f.stats.chakra >= prof.ultimate.cost && dist < 8 && this.rng() < 0.05) {
+        this.tap(InputFlag.ULTIMATE);
+        this.tapTimer = 2.4;
+      } else if (dist < 9 && this.rng() < 0.16) {
+        const usable: number[] = [];
+        for (let i = 0; i < prof.skills.length; i++) {
+          const sk = prof.skills[i];
+          if (f.skillCooldowns[i] > 0 || f.stats.chakra < sk.cost) continue;
+          // Projectile and counter skills are fine at range; the rest need to be close.
+          const far = !!sk.projectile;
+          if (far ? dist > 4 : dist < 5.5) usable.push(i);
+        }
+        if (usable.length) {
+          const idx = usable[Math.floor(Math.abs(this.rng() * this.skill) * usable.length) % usable.length];
+          this.tap([InputFlag.SKILL1, InputFlag.SKILL2, InputFlag.SKILL3, InputFlag.SKILL4][idx]);
+          this.tapTimer = 1.1;
+        }
+      }
+    }
+
     switch (this.mode) {
       case 'IDLE': {
         this.source.releaseAll();

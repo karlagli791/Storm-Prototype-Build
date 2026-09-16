@@ -1,0 +1,38 @@
+{
+ "key": "karasu_crow",
+ "weighted": [],
+ "source": "Karasu (Crow - Ultra).dae",
+ "height": 1.1725,
+ "headY": 1.0,
+ "bones": {
+  "hips": "OP_Hips",
+  "spine": "OP_Spine",
+  "chest": "OP_Chest",
+  "neck": "OP_Neck",
+  "head": "OP_Head"
+ },
+ "missing": [
+  "shoulderL",
+  "armL",
+  "foreL",
+  "handL",
+  "shoulderR",
+  "armR",
+  "foreR",
+  "handR",
+  "thighL",
+  "calfL",
+  "footL",
+  "toeL",
+  "thighR",
+  "calfR",
+  "footR",
+  "toeR",
+  "weapon"
+ ],
+ "chains": [],
+ "meshes": [
+  "17104_Body",
+  "17104_Face"
+ ]
+}

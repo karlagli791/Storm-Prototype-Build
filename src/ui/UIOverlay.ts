@@ -33,6 +33,10 @@ export interface HudFighterData {
   ultimateReady: boolean;
   /** PL_ACT_* name of the current state (debug readout). */
   act: string;
+  /** One Piece fighters: the four palette skills with their cooldowns, and the gauge's own name. */
+  skills?: { name: string; button: string; cooldown: number; max: number; cost: number; ready: boolean }[];
+  gaugeName?: string;
+  haki?: boolean;
 }
 
 /** Small image cache for HUD portraits. */
@@ -415,6 +419,37 @@ export class UIOverlay {
         ctx.stroke();
       }
     }
+    // One Piece skill palette: four slots with their cooldown sweep (L1 + face buttons).
+    if (f.skills?.length) {
+      const sw = 34;
+      const sh = 16;
+      const sy = pipsY + 12;
+      for (let i = 0; i < f.skills.length; i++) {
+        const sk = f.skills[i];
+        const sx = mirror ? barX + bw - 8 - (i + 1) * (sw + 5) : barX + 8 + i * (sw + 5);
+        ctx.fillStyle = sk.ready ? 'rgba(20,28,44,0.85)' : 'rgba(30,14,14,0.85)';
+        ctx.fillRect(sx, sy, sw, sh);
+        if (sk.cooldown > 0 && sk.max > 0) {
+          ctx.fillStyle = 'rgba(255,70,70,0.35)';
+          ctx.fillRect(sx, sy, sw * (sk.cooldown / sk.max), sh);
+        }
+        ctx.strokeStyle = sk.ready ? 'rgba(180,220,255,0.75)' : 'rgba(255,140,140,0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx + 0.5, sy + 0.5, sw - 1, sh - 1);
+        ctx.fillStyle = sk.ready ? '#dff0ff' : '#ffb0b0';
+        ctx.font = '600 10px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(sk.button, sx + sw / 2, sy + 11);
+      }
+      ctx.textAlign = 'left';
+      if (f.haki) {
+        ctx.fillStyle = '#c8a8ff';
+        ctx.font = '700 11px "Segoe UI", sans-serif';
+        const hx = mirror ? barX + bw - 8 - 4 * (sw + 5) - 44 : barX + 8 + 4 * (sw + 5) + 4;
+        ctx.fillText('HAKI', hx, sy + 12);
+      }
+    }
+
     // Guard durability mini bar
     const gdw = bw * 0.3;
     const gdx = mirror ? barX + bw - 8 - SUB_STOCK_MAX * (pipR * 2 + 6) - gdw - 6 : barX + 8 + SUB_STOCK_MAX * (pipR * 2 + 6) + 6;

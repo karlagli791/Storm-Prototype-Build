@@ -115,6 +115,21 @@ function moveRows(d: CharacterDef): string {
   const dmg = (moves: { hitboxes: { damage: number }[] }[]) => moves.reduce((n, m) => n + m.hitboxes.reduce((a, h) => a + h.damage, 0), 0);
   const row = (name: string, input: string, note: string) => `<div class="stm-row"><span><b>${name}</b><br><small style="opacity:.7">${note}</small></span><span style="font-weight:800;letter-spacing:.2em;color:#ffd166">${input}</span></div>`;
   const rows: string[] = [];
+  // One Piece fighters run the Fighting Path layout: four skills on L1, the finisher on R1 + ○.
+  if (d.opbr) {
+    const o = d.opbr;
+    if (o.style) rows.push(`<div class="stm-row"><span style="opacity:.85">${o.style}</span><span style="color:#8adfff;font-weight:800;letter-spacing:.2em">ONE PIECE</span></div>`);
+    rows.push(row('Combo string', `${GLYPH.circle} ${GLYPH.circle} ${GLYPH.circle} ${GLYPH.circle}`, `${d.neutralString.moves.length} hits · ${GLYPH.up}${GLYPH.circle} launcher · ${GLYPH.down}${GLYPH.circle} tilt · air string`));
+    const btn = [`${GLYPH.l1} + ${GLYPH.circle}`, `${GLYPH.l1} + ${GLYPH.triangle}`, `${GLYPH.l1} + ${GLYPH.square}`, `${GLYPH.l1} + ${GLYPH.cross}`];
+    o.skills.forEach((sk, i) => rows.push(row(sk.name, btn[i] ?? `S${i + 1}`, `${sk.desc} · ${sk.cost}% gauge · ${sk.cooldown}s cooldown`)));
+    rows.push(row(o.ultimate.name, `${GLYPH.r1} + ${GLYPH.circle} (full gauge)`, o.ultimate.desc));
+    rows.push(row('Armament Haki', `${GLYPH.r1} + ${GLYPH.triangle}`, '12 s · +25 % damage, skills gain super armour'));
+    rows.push(row('Observation step', `${GLYPH.r1} (tap)`, 'short invulnerable sidestep'));
+    rows.push(row(`${o.gaugeName ?? 'HAKI'} gauge`, `${GLYPH.triangle} hold`, 'charge it standing still; skills spend it'));
+    rows.push(row('Guard · substitution', `${GLYPH.l2} · ${GLYPH.l2} in hitstun`, 'shared with the Storm side'));
+    rows.push(row('Keyboard', '1 2 3 4 · 5 · R · F', 'skills · finisher · Haki · step'));
+    return rows.join('');
+  }
   rows.push(row('Neutral string', `${GLYPH.circle} ${GLYPH.circle} ${GLYPH.circle} ${GLYPH.circle}`, `${d.neutralString.moves.length} moves · ${hits(d.neutralString.moves)} hits · ${dmg(d.neutralString.moves)} dmg`));
   rows.push(row('Up string (launcher)', `${GLYPH.circle} ${GLYPH.up}${GLYPH.circle} ${GLYPH.up}${GLYPH.circle}`, `${d.upString.moves.length} moves · ends in a launch`));
   rows.push(row('Down string (tilt)', `${GLYPH.circle} ${GLYPH.down}${GLYPH.circle} ${GLYPH.down}${GLYPH.circle}`, `${d.downString.moves.length} moves`));

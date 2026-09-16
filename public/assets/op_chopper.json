@@ -1,0 +1,40 @@
+{
+ "key": "chopper",
+ "weighted": [],
+ "source": "Chopper (Egghead) (Ultra).dae",
+ "height": 2.2712,
+ "headY": 1.0,
+ "bones": {
+  "hips": "OP_Hips",
+  "spine": "OP_Spine",
+  "chest": "OP_Chest",
+  "neck": "OP_Neck",
+  "head": "OP_Head",
+  "shoulderL": "OP_L_Shoulder",
+  "armL": "OP_L_Arm",
+  "foreL": "OP_L_Fore",
+  "handL": "OP_L_Hand",
+  "shoulderR": "OP_R_Shoulder",
+  "armR": "OP_R_Arm",
+  "foreR": "OP_R_Fore",
+  "handR": "OP_R_Hand",
+  "thighL": "OP_L_Thigh",
+  "calfL": "OP_L_Calf",
+  "footL": "OP_L_Foot",
+  "thighR": "OP_R_Thigh",
+  "calfR": "OP_R_Calf",
+  "footR": "OP_R_Foot"
+ },
+ "missing": [
+  "toeL",
+  "toeR",
+  "weapon"
+ ],
+ "chains": [],
+ "meshes": [
+  "35220",
+  "35220_01_Glass",
+  "35220_Glass",
+  "zhenguan"
+ ]
+}

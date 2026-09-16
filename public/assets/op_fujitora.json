@@ -1,0 +1,39 @@
+{
+ "key": "fujitora",
+ "weighted": [],
+ "source": "Fujitora.dae",
+ "height": 1.112,
+ "headY": 1.0,
+ "bones": {
+  "hips": "OP_Hips",
+  "spine": "OP_Spine",
+  "chest": "OP_Chest",
+  "neck": "OP_Neck",
+  "head": "OP_Head",
+  "shoulderL": "OP_L_Shoulder",
+  "armL": "OP_L_Arm",
+  "foreL": "OP_L_Fore",
+  "handL": "OP_L_Hand",
+  "shoulderR": "OP_R_Shoulder",
+  "armR": "OP_R_Arm",
+  "foreR": "OP_R_Fore",
+  "handR": "OP_R_Hand",
+  "thighL": "OP_L_Thigh",
+  "calfL": "OP_L_Calf",
+  "footL": "OP_L_Foot",
+  "toeL": "OP_L_Toe",
+  "thighR": "OP_R_Thigh",
+  "calfR": "OP_R_Calf",
+  "footR": "OP_R_Foot",
+  "toeR": "OP_R_Toe",
+  "weapon": "OP_Weapon"
+ },
+ "missing": [],
+ "chains": [],
+ "meshes": [
+  "12006_Body_C002",
+  "12006_Cloak",
+  "12006_Face",
+  "12006_Weapon"
+ ]
+}

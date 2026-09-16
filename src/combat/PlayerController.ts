@@ -88,6 +88,8 @@ export class PlayerController {
     if (f.position.y <= f.groundY + 0.001) f.grounded = true;
 
     // 8. Rig
+    // Cloth and hair chains on the One Piece rigs lag behind the body's travel.
+    f.rig.opbr?.setTravel(f.velocity);
     f.rig.root.position.copy(f.position);
     f.rig.root.rotation.y = f.yaw;
     f.rig.update(
