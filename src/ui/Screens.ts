@@ -23,7 +23,7 @@ export function runTitle(): Promise<void> {
   const s = screen(`
     <div class="stm-logo"><div class="big">STORM</div><div class="small">PROTOTYPE BUILD</div><div class="tag">NARUTO SHIPPUDEN · ULTIMATE NINJA</div></div>
     <div class="stm-press">PRESS ANY BUTTON</div>
-    <div class="stm-corner">v0.6.0 · TEAM OF THREE · 2 PLAYERS<br>real CC2 assets · Storm 4 frame data</div>`);
+    <div class="stm-corner">v0.8.0 · 36 FIGHTERS · TEAM OF THREE · 2 PLAYERS<br>real CC2 assets · Storm 4 frame data · One Piece: Fighting Path models</div>`);
   const poller = new MenuInputPoller();
   poller.start();
   return new Promise((resolve) => {

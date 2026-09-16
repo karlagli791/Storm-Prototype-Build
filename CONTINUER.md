@@ -280,3 +280,4 @@ Stage ids: `tools/Stage_IDs.pdf` (sd03a Hidden Leaf Forest, sd05a Forest of Quie
 - 2026-09-15 10:35 — Version 0.7.0
 - 2026-09-15 10:39 — Held chakra effects survive slow frames (fade on missed updates, not wall-clock gaps)
 - 2026-09-16 15:02 — One Piece: Fighting Path fighters with their own rig, animation and controls
+- 2026-09-16 15:09 — One Piece polish: weapons ride in the hand, calmer skill effects, size-aware camera
